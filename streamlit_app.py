@@ -459,7 +459,7 @@ def dashboard_progress_bar(n):
             <div style="font-size:11px;color:#666;">{rule}</div>
         </div>
         """
-        for title, colour, detail, rule in segments
+        for title, colour, detail in segments
     )
 
     st.markdown(
