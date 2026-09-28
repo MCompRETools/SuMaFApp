@@ -35,10 +35,14 @@ LEVELS = {
                "of sustainability in your DevOps project.",
         "defaults": [
             ("Stakeholder Awareness of Sustainability Inclusion", "At project initiation, stakeholders communicate sustainability objectives with the client and team members. Such as ESG compliance at EU. They openly discuss what is possible and what not in order to comply with guidelines or standards."),
-            ("Identify relevant sustainability dimensions", "Considered environmental, social and economic aspects for the project scope."),
-            ("Capture initial sustainability goals", "Documented preliminary goals (e.g. reduce energy use, promote inclusive design)."),
-            ("Assign responsibility", "Identified team member to champion sustainability discussions."),
-            ("Document in project plan", "Added sustainability consideration to project plan or backlog."),
+            ("Awareness of environmental, technical and social sustainability", "Team members take a mandatory course or training on sustainability concepts."),
+            ("Awareness of energy or resource implications", "Team members discuss how DevOps activities such as builds, testing, deployments and infrastructure usage can have energy and resource implications"),
+            ("Awareness of technical debt impact", "Team lead or Technical Architect provide guidance on how technical debt can affect maintainability, software longevity, development effort and long-term sustainability. Technical Debt induced byAI generated Codes and their propagation."),
+            ("Awareness of developer well-being and burnout risks", "Manager openly communicate on how workload, excessive overtime, repetitive activities, cognitive load and other factors that may affect developer well-being and long-term productivity."),
+            ("Sustainability objectives discussed during planning", "Sustainability objectives are explicitly discussed during project planning, including the relevant environmental, technical, and social concerns and their implications for project decisions."),
+            ("Sustainability dimensions prioritized for the project", "Relevant sustainability dimensions (environmental, technical, social, and, where applicable, economic) are identified and recorded in project dashboard"),
+            ("Initial identification of DevOps tools supporting sustainability assessment", "Teams actively reviews capability of each tool from their sustainability understanding"),
+            ("Awareness of existing tool capabilities and limitations", "Team knowledge dissemination regarding different build or testing tools and their capabilities"),
         ],
     },
     2: {
