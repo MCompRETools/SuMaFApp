@@ -431,20 +431,17 @@ def dashboard_progress_bar(n):
         (
             "Sufficient",
             sufficient_colour,
-            f"{required_satisfied}/{required_total} required",
-            "All required indicators met",
+            f"{required_satisfied}/{required_total} required"
         ),
         (
             "Sufficient+",
             sufficient_plus_colour,
-            f"{dopt_satisfied}/{dopt_total} desirable + optional",
-            "More than 30% of desirable + optional indicators met",
+            f"{dopt_satisfied}/{dopt_total} desirable + optional"
         ),
         (
             "Advanced",
             advanced_colour,
-            f"{all_satisfied}/{all_total} indicators",
-            "At least 80% of indicators met",
+            f"{all_satisfied}/{all_total} indicators"
         ),
     ]
 
