@@ -171,18 +171,71 @@ def sidebar():
 def dashboard():
     st.subheader('Dashboard');r=achieved();done=sum(counts(n)[0] for n in LEVELS);tot=sum(counts(n)[1] for n in LEVELS);c1,c2,c3=st.columns(3);c1.metric('Current maturity level',f'Level {r}' if r else 'Not yet at Level 1');c2.metric('Indicators assessed',f'{done}/{tot}');c3.metric('Next level',f'Level {r+1}' if r<5 else 'All levels done');st.progress(done/tot if tot else 0)
 def requirement_type_chart(n):
-    a=inds(n)
-    if not a:return
-    ds=defs(n); order=['Required','Desirable','Optional']
-    totals={x:0 for x in order}; sat={x:0 for x in order}
+    """Show percentage of indicators satisfied within each requirement type."""
+    a = inds(n)
+    if not a:
+        return
+
+    ds = defs(n)
+    order = ['Required', 'Desirable', 'Optional']
+
+    totals = {x: 0 for x in order}
+    satisfied_counts = {x: 0 for x in order}
+
     for i in a:
-        d=ds[i['id']]; typ=d[6].title(); totals[typ]+=1
-        if satisfied(i,d): sat[typ]+=1
-    chart_df=pd.DataFrame({'Requirement type':order,'Satisfied':[sat[x] for x in order]}).set_index('Requirement type')
-    st.markdown(f"#### Level {n} – {LEVELS[n]['name']}: satisfied indicators")
-    st.caption("Satisfied means Active for qualitative indicators, True for Boolean indicators, and a positive numeric value for quantitative indicators. Indicator 3 requires Active status and at least one recorded session.")
-    st.bar_chart(chart_df,use_container_width=True)
-    st.dataframe(pd.DataFrame({'Requirement type':order,'Satisfied':[sat[x] for x in order],'Total':[totals[x] for x in order]}),hide_index=True,use_container_width=True)
+        d = ds[i['id']]
+        requirement_type = d[6].title()
+        totals[requirement_type] += 1
+
+        if satisfied(i, d):
+            satisfied_counts[requirement_type] += 1
+
+    percentages = {
+        x: (
+            round(100 * satisfied_counts[x] / totals[x], 1)
+            if totals[x] else 0
+        )
+        for x in order
+    }
+
+    chart_df = pd.DataFrame({
+        'Requirement type': order,
+        'Achieved (%)': [percentages[x] for x in order],
+    }).set_index('Requirement type')
+
+    st.markdown(
+        f"#### Level {n} – {LEVELS[n]['name']}: achievement by indicator type"
+    )
+    st.caption(
+        "Percentage of indicators satisfied within each requirement type. "
+        "The denominator is the total number of indicators of that type."
+    )
+
+    st.bar_chart(
+        chart_df,
+        y='Achieved (%)',
+        y_min=0,
+        y_max=100,
+        use_container_width=True,
+    )
+
+    summary = pd.DataFrame({
+        'Requirement type': order,
+        'Achieved': [
+            f"{satisfied_counts[x]} / {totals[x]}"
+            for x in order
+        ],
+        'Achievement (%)': [
+            percentages[x]
+            for x in order
+        ],
+    })
+
+    st.dataframe(
+        summary,
+        hide_index=True,
+        use_container_width=True,
+    )
 
 
 def assessment():
