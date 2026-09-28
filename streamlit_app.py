@@ -235,8 +235,8 @@ def indicator_card(n,i,d):
 
 def indicators_tab(n):
     a=inds(n); ds=defs(n)
-    if not a: st.info(f'Level {n} does not have indicators configured yet.');return
-    st.subheader(f'Level {n} Indicators');st.caption('Evidence and assessment fields are defined separately for each indicator.')
+    if not a: st.info(f'Level {n} is under Progress.');return
+    if n==1: st.subheader(f'Level {n} Indicators');st.caption('This maturity is best achieved at project initiation, but not restricted to it.')
     pages=max(1,ceil(len(a)/PAGE_SIZE));pk=f'pg-{n}';pg=min(st.session_state.get(pk,0),pages-1)
     for i in a[pg*PAGE_SIZE:(pg+1)*PAGE_SIZE]:indicator_card(n,i,ds[i['id']])
     lo=pg*PAGE_SIZE+1;hi=min((pg+1)*PAGE_SIZE,len(a));_,info,prev,nxt=st.columns([6,1.2,.5,.5]);info.caption(f'{lo}-{hi} of {len(a)}');prev.button('‹',disabled=pg==0,key=f'p-{n}',on_click=lambda:st.session_state.__setitem__(pk,pg-1));nxt.button('›',disabled=pg>=pages-1,key=f'n-{n}',on_click=lambda:st.session_state.__setitem__(pk,pg+1))
