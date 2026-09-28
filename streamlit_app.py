@@ -26,6 +26,64 @@ LEVELS={1:{'name':'Scope Definition','desc':'Sustainability is recognized as a p
 CSS='''<style>
 :root{--g:#1f7a4d;--gl:#e6f2ea;--gb:#cfe5d6}
 [data-testid="stSidebar"]{background:#f4f8f5}.brand{font-size:22px;font-weight:600;line-height:1.2}.brand span{font-size:13px;font-weight:400;color:#5b6b62}.avatar{width:40px;height:40px;border-radius:50%;background:#8a9a91;color:white;display:flex;align-items:center;justify-content:center;font-weight:600;margin-left:auto}.banner{display:flex;gap:20px;align-items:center;background:var(--gl);border:1px solid var(--gb);border-radius:12px;padding:20px 24px;margin-bottom:12px}.banner h2{margin:0 0 4px;color:#14532d}.banner p{margin:0;color:#3d4a43}.badge{min-width:60px;height:60px;border-radius:50%;background:var(--g);color:white;font-size:28px;font-weight:600;display:flex;align-items:center;justify-content:center}.tip{background:white;border:1px solid var(--gb);border-radius:10px;padding:12px 16px;min-width:260px;max-width:360px;font-size:13px;color:#3d4a43}.card{border:1px solid #dfe7e2;border-radius:12px;padding:18px;margin-bottom:14px;background:#fff}.title{font-weight:650;font-size:16px;color:#26352e}.id{color:var(--g);font-weight:700;margin-right:8px}.obs{color:#4b5a52;font-size:14px;line-height:1.45;margin-top:6px}.label{font-weight:600;color:#33413a;margin-bottom:4px}.hint{color:#68776f;font-size:12px}[data-testid="stBaseButton-primary"]{background:var(--g);border-color:var(--g)}
+
+.level-progress{
+    display:flex;
+    width:100%;
+    height:92px;
+    border-radius:10px;
+    overflow:hidden;
+    border:1px solid #d8e1dc;
+    margin:8px 0 16px 0;
+    background:#f5f7f6;
+}
+
+.progress-segment{
+    flex:1;
+    min-width:0;
+    padding:10px 14px;
+    border-right:1px solid rgba(255,255,255,.85);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+}
+
+.progress-segment:last-child{
+    border-right:none;
+}
+
+.progress-segment.red{
+    background:#f3c7c7;
+    color:#6f2020;
+}
+
+.progress-segment.yellow{
+    background:#f4df9a;
+    color:#654d00;
+}
+
+.progress-segment.green{
+    background:#bfe3c9;
+    color:#155b32;
+}
+
+.progress-title{
+    font-weight:700;
+    font-size:15px;
+}
+
+.progress-detail{
+    font-size:13px;
+    font-weight:600;
+    margin-top:2px;
+}
+
+.progress-rule{
+    font-size:11px;
+    opacity:.85;
+    margin-top:2px;
+}
+
 </style>'''
 
 def slug(x): return re.sub(r'[^a-z0-9]+','-',x.lower()).strip('-') or 'project'
@@ -168,74 +226,281 @@ def sidebar():
     with st.sidebar:
         for k,label in nav:st.button(label,key='nav-'+k,use_container_width=True,on_click=lambda k=k:st.session_state.__setitem__('page',k),type='primary' if p==k else 'secondary')
         st.divider();st.caption('🌿 Smaller footprints. Stronger software.')
-def dashboard():
-    st.subheader('Dashboard');r=achieved();done=sum(counts(n)[0] for n in LEVELS);tot=sum(counts(n)[1] for n in LEVELS);c1,c2,c3=st.columns(3);c1.metric('Current maturity level',f'Level {r}' if r else 'Not yet at Level 1');c2.metric('Indicators assessed',f'{done}/{tot}');c3.metric('Next level',f'Level {r+1}' if r<5 else 'All levels done');st.progress(done/tot if tot else 0)
-def requirement_type_chart(n):
-    """Show percentage of indicators satisfied within each requirement type."""
+def level_progress_condition(n):
+    """
+    Return the dashboard condition for a level.
+
+    Sufficient:
+        All required indicators are satisfied.
+
+    Sufficient+:
+        Sufficient is achieved AND more than 60% of desirable + optional
+        indicators are satisfied.
+
+    Advanced:
+        All indicators (required + desirable + optional) are satisfied.
+    """
     a = inds(n)
+
     if not a:
-        return
+        return {
+            "required_total": 0,
+            "required_satisfied": 0,
+            "desirable_optional_total": 0,
+            "desirable_optional_satisfied": 0,
+            "all_total": 0,
+            "all_satisfied": 0,
+            "sufficient": False,
+            "sufficient_plus": False,
+            "advanced": False,
+        }
 
     ds = defs(n)
-    order = ['Required', 'Desirable', 'Optional']
 
-    totals = {x: 0 for x in order}
-    satisfied_counts = {x: 0 for x in order}
+    required = [
+        i for i in a
+        if ds[i["id"]][6].lower() == "required"
+    ]
 
-    for i in a:
-        d = ds[i['id']]
-        requirement_type = d[6].title()
-        totals[requirement_type] += 1
+    desirable_optional = [
+        i for i in a
+        if ds[i["id"]][6].lower() in ("desirable", "optional")
+    ]
 
-        if satisfied(i, d):
-            satisfied_counts[requirement_type] += 1
+    required_satisfied = sum(
+        satisfied(i, ds[i["id"]])
+        for i in required
+    )
 
-    percentages = {
-        x: (
-            round(100 * satisfied_counts[x] / totals[x], 1)
-            if totals[x] else 0
-        )
-        for x in order
+    desirable_optional_satisfied = sum(
+        satisfied(i, ds[i["id"]])
+        for i in desirable_optional
+    )
+
+    all_satisfied = sum(
+        satisfied(i, ds[i["id"]])
+        for i in a
+    )
+
+    required_ok = (
+        bool(required)
+        and required_satisfied == len(required)
+    )
+
+    desirable_optional_ratio = (
+        desirable_optional_satisfied / len(desirable_optional)
+        if desirable_optional
+        else 0
+    )
+
+    sufficient_plus = (
+        required_ok
+        and desirable_optional_ratio > 0.60
+    )
+
+    advanced = (
+        len(a) > 0
+        and all_satisfied == len(a)
+    )
+
+    return {
+        "required_total": len(required),
+        "required_satisfied": required_satisfied,
+        "desirable_optional_total": len(desirable_optional),
+        "desirable_optional_satisfied": desirable_optional_satisfied,
+        "all_total": len(a),
+        "all_satisfied": all_satisfied,
+        "sufficient": required_ok,
+        "sufficient_plus": sufficient_plus,
+        "advanced": advanced,
     }
 
-    chart_df = pd.DataFrame({
-        'Requirement type': order,
-        'Achieved (%)': [percentages[x] for x in order],
-    }).set_index('Requirement type')
+
+def dashboard_progress_bar(n):
+    """
+    Three-stage horizontal maturity progress bar:
+    Sufficient -> Sufficient+ -> Advanced.
+
+    Red = not achieved
+    Yellow = partially met / stage is active but not fully achieved
+    Green = fully achieved
+    """
+    p = level_progress_condition(n)
+
+    # Section status:
+    # - Sufficient: green when all required are met, otherwise yellow if
+    #   at least one required indicator is met, otherwise red.
+    # - Sufficient+: green when >60% desirable/optional are met AND
+    #   Sufficient is achieved; yellow when some progress exists.
+    # - Advanced: green only when all indicators are met; yellow when
+    #   some indicators are met; otherwise red.
+    req_partial = (
+        p["required_satisfied"] > 0
+        and not p["sufficient"]
+    )
+
+    des_opt_partial = (
+        p["desirable_optional_satisfied"] > 0
+        and not p["sufficient_plus"]
+    )
+
+    all_partial = (
+        p["all_satisfied"] > 0
+        and not p["advanced"]
+    )
+
+    sufficient_class = (
+        "green"
+        if p["sufficient"]
+        else "yellow"
+        if req_partial
+        else "red"
+    )
+
+    sufficient_plus_class = (
+        "green"
+        if p["sufficient_plus"]
+        else "yellow"
+        if des_opt_partial
+        else "red"
+    )
+
+    advanced_class = (
+        "green"
+        if p["advanced"]
+        else "yellow"
+        if all_partial
+        else "red"
+    )
+
+    req_text = (
+        f"{p['required_satisfied']}/{p['required_total']} required"
+        if p["required_total"]
+        else "No required indicators"
+    )
+
+    des_opt_text = (
+        f"{p['desirable_optional_satisfied']}/"
+        f"{p['desirable_optional_total']} desirable + optional"
+        if p["desirable_optional_total"]
+        else "No desirable/optional indicators"
+    )
+
+    all_text = (
+        f"{p['all_satisfied']}/{p['all_total']} indicators"
+    )
 
     st.markdown(
-        f"#### Level {n} – {LEVELS[n]['name']}: achievement by indicator type"
+        f"""
+        <div class="level-progress">
+            <div class="progress-segment {sufficient_class}">
+                <div class="progress-title">Sufficient</div>
+                <div class="progress-detail">{req_text}</div>
+                <div class="progress-rule">All required indicators</div>
+            </div>
+
+            <div class="progress-segment {sufficient_plus_class}">
+                <div class="progress-title">Sufficient+</div>
+                <div class="progress-detail">{des_opt_text}</div>
+                <div class="progress-rule">More than 60%</div>
+            </div>
+
+            <div class="progress-segment {advanced_class}">
+                <div class="progress-title">Advanced</div>
+                <div class="progress-detail">{all_text}</div>
+                <div class="progress-rule">All indicators</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
+
+
+def dashboard():
+    st.subheader('Dashboard')
+
+    reached = achieved()
+
+    all_done = sum(
+        counts(n)[0]
+        for n in LEVELS
+    )
+
+    all_total = sum(
+        counts(n)[1]
+        for n in LEVELS
+    )
+
+    m1, m2, m3 = st.columns(3)
+
+    m1.metric(
+        "Current maturity level",
+        f"Level {reached}"
+        if reached
+        else "Not yet at Level 1",
+    )
+
+    m2.metric(
+        "Indicators satisfied",
+        f"{all_done} / {all_total}",
+    )
+
+    m3.metric(
+        "Next level",
+        (
+            f"Level {reached + 1}"
+            if reached < len(LEVELS)
+            else "All levels done"
+        ),
+    )
+
+    st.divider()
+    st.subheader("Level progress conditions")
     st.caption(
-        "Percentage of indicators satisfied within each requirement type. "
-        "The denominator is the total number of indicators of that type."
+        "Each level progresses through three conditions: Sufficient, "
+        "Sufficient+, and Advanced."
     )
 
-    # Use only arguments supported across current Streamlit versions.
-    # The percentages are inherently bounded between 0 and 100.
-    st.bar_chart(
-        chart_df,
-        y='Achieved (%)',
-        use_container_width=True,
-    )
+    for n, lv in LEVELS.items():
+        if not inds(n):
+            continue
 
-    summary = pd.DataFrame({
-        'Requirement type': order,
-        'Achieved': [
-            f"{satisfied_counts[x]} / {totals[x]}"
-            for x in order
-        ],
-        'Achievement (%)': [
-            percentages[x]
-            for x in order
-        ],
-    })
+        with st.container(border=True):
+            st.markdown(
+                f"**Level {n} – {lv['name']}**"
+            )
 
-    st.dataframe(
-        summary,
-        hide_index=True,
-        use_container_width=True,
-    )
+            dashboard_progress_bar(n)
+
+    st.divider()
+
+    for col, (n, lv) in zip(
+        st.columns(len(LEVELS)),
+        LEVELS.items(),
+    ):
+        done, total = counts(n)
+
+        with col.container(border=True):
+            st.markdown(f"**Level {n}**")
+            st.caption(lv['name'])
+
+            st.progress(
+                done / total
+                if total
+                else 0.0
+            )
+
+            st.caption(
+                f"{done}/{total} · {status(n)}"
+            )
+
+            st.button(
+                "Open",
+                key=f"open-{n}",
+                use_container_width=True,
+                on_click=go,
+                args=(f"level-{n}",),
+            )
 
 
 def assessment():
