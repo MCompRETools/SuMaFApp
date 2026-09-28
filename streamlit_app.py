@@ -10,7 +10,29 @@ st.set_page_config(page_title='Sustainability Maturity Tool', page_icon='🌿', 
 st.session_state.setdefault('page', 'dashboard')
 DATA_DIR=Path('data'); PROJECTS_FILE=DATA_DIR/'projects.json'; PAGE_SIZE=5
 QUAL=['Active','Suggested','Not evident']; BOOL=['True','False']
+PRECONDITIONS = {
+    # Level 1
+    'L1-01': [],
+    'L1-02': [],
+    'L1-03': ['L1-02'],
+    'L1-04': ['L1-02'],
+    'L1-05': [],
+    'L1-06': ['L1-02'],
+    'L1-07': [],
+    'L1-08': ['L1-04'],
+    'L1-09': ['L1-04'],
 
+    # Level 2
+    'L2-01': ['L1-02', 'L1-03', 'L1-04'],
+    'L2-02': ['L1-06'],
+    'L2-03': [],
+    'L2-04': ['L1-06'],
+    'L2-05': [],
+    'L2-06': ['L1-05'],
+    'L2-07': ['L2-02'],
+    'L2-08': ['L2-05'],
+    'L2-09': [],
+}
 L1=[
 ('L1-01','Stakeholder awareness of sustainability goals','At project initiation, stakeholders communicate sustainability objectives with the client and team members, including relevant guidelines or standards, and discuss what is and is not feasible.',['notes','upload'],'qualitative',None,'desirable'),
 ('L1-02','Awareness of environmental, technical and social sustainability','Team members participate on a mandatory course or training on environmental, technical and social sustainability concepts.',['notes','upload'],'boolean',None,'required'),
@@ -198,39 +220,326 @@ def save_uploads(i,files):
         p=evidence_path(i['id'],f.name)
         if not p.exists():p.write_bytes(f.getbuffer())
         if p.name not in i['evidence']:i['evidence'].append(p.name)
+def precondition_status(indicator_id):
+    """
+    Check whether all prerequisites for an indicator are satisfied.
 
-def indicator_card(n,i,d):
-    iid=i['id']; key=f'{slug(st.session_state.project)}-{iid}'; typ=d[4]; requirement=d[6].title()
-    st.markdown(f"<div class='card'><div class='title'><span class='id'>{iid}</span>{i['title']}</div><div class='obs'><b>Type:</b> {requirement}<br><b>Observable condition:</b> {i['description']}</div></div>",unsafe_allow_html=True)
-    e,m=st.columns([1.5,1],gap='large')
+    Returns:
+        (True, []) if all prerequisites are satisfied
+        (False, [unmet prerequisite IDs]) otherwise
+    """
+
+    prerequisites = PRECONDITIONS.get(indicator_id, [])
+
+    # No prerequisites
+    if not prerequisites:
+        return True, []
+
+    unresolved = []
+
+    for prerequisite_id in prerequisites:
+
+        found = False
+
+        # Search all maturity levels for the prerequisite indicator
+        for level_number in LEVELS:
+
+            definitions = defs(level_number)
+
+            for indicator in inds(level_number):
+
+                if indicator.get('id') == prerequisite_id:
+
+                    found = True
+
+                    if not satisfied(
+                        indicator,
+                        definitions[prerequisite_id]
+                    ):
+                        unresolved.append(prerequisite_id)
+
+                    break
+
+            if found:
+                break
+
+        # If prerequisite is not found in the model,
+        # keep the dependent indicator locked.
+        if not found:
+            unresolved.append(prerequisite_id)
+
+    return len(unresolved) == 0, unresolved
+def render_locked_indicator(
+    indicator_id,
+    title,
+    description,
+    requirement,
+    unresolved
+):
+    """
+    Display an indicator that cannot yet be attempted.
+    """
+
+    prerequisite_text = ", ".join(unresolved)
+
+    st.markdown(
+        f"""
+        <div
+            title="Complete prerequisite indicator(s): {prerequisite_text}"
+            style="
+                border:1px solid #dfe3e1;
+                border-radius:12px;
+                padding:18px;
+                margin-bottom:14px;
+                background:#f5f6f5;
+                opacity:.78;
+            "
+        >
+
+            <div
+                style="
+                    font-weight:650;
+                    font-size:16px;
+                    color:#26352e;
+                "
+            >
+                <span
+                    style="
+                        color:#7b8580;
+                        font-weight:700;
+                        margin-right:8px;
+                    "
+                >
+                    🔒 {indicator_id}
+                </span>
+
+                {title}
+            </div>
+
+            <div
+                style="
+                    color:#68776f;
+                    font-size:14px;
+                    line-height:1.45;
+                    margin-top:6px;
+                "
+            >
+                <b>Type:</b> {requirement}<br>
+                <b>Observable condition:</b> {description}
+            </div>
+
+            <div
+                style="
+                    margin-top:10px;
+                    padding:8px 10px;
+                    border-radius:7px;
+                    background:#eceeed;
+                    color:#5b6560;
+                    font-size:12px;
+                "
+            >
+                🔒 Locked — complete prerequisite indicator(s):
+                {prerequisite_text}
+            </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+def indicator_card(n, i, d):
+
+    iid = i['id']
+    key = f'{slug(st.session_state.project)}-{iid}'
+    typ = d[4]
+    requirement = d[6].title()
+
+    # ---------------------------------------------------------
+    # Check prerequisite indicators
+    # ---------------------------------------------------------
+
+    unlocked, unresolved = precondition_status(iid)
+
+    # ---------------------------------------------------------
+    # Lock indicator if prerequisites are not satisfied
+    # ---------------------------------------------------------
+
+    if not unlocked:
+
+        render_locked_indicator(
+            iid,
+            i['title'],
+            i['description'],
+            requirement,
+            unresolved
+        )
+
+        return
+
+    # ---------------------------------------------------------
+    # Normal editable indicator
+    # ---------------------------------------------------------
+
+    st.markdown(
+        f"""
+        <div class='card'>
+            <div class='title'>
+                <span class='id'>{iid}</span>
+                {i['title']}
+            </div>
+
+            <div class='obs'>
+                <b>Type:</b> {requirement}<br>
+                <b>Observable condition:</b>
+                {i['description']}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    e, m = st.columns([1.5, 1], gap='large')
+
     with e:
-        st.markdown("<div class='label'>Evidence</div>",unsafe_allow_html=True)
+
+        st.markdown(
+            "<div class='label'>Evidence</div>",
+            unsafe_allow_html=True
+        )
+
         if 'notes' in d[3]:
-            i['notes']=st.text_area('Notes',i.get('notes',''),key=key+'-notes',height=95,placeholder='Record the activity, discussion, decision, or observation...')
+
+            i['notes'] = st.text_area(
+                'Notes',
+                i.get('notes', ''),
+                key=key + '-notes',
+                height=95,
+                placeholder=(
+                    'Record the activity, discussion, decision, '
+                    'or observation...'
+                )
+            )
+
         if 'upload' in d[3]:
-            files=st.file_uploader('Supporting document',accept_multiple_files=True,key=key+'-files')
-            save_uploads(i,files)
+
+            files = st.file_uploader(
+                'Supporting document',
+                accept_multiple_files=True,
+                key=key + '-files'
+            )
+
+            save_uploads(i, files)
+
             if i['evidence']:
-                st.caption(f"📎 {len(i['evidence'])} supporting file(s) saved")
+
+                st.caption(
+                    f"📎 {len(i['evidence'])} "
+                    "supporting file(s) saved"
+                )
+
                 for fn in i['evidence']:
-                    p=evidence_path(iid,fn)
-                    if p.exists():st.download_button(f'View/download {fn}',p.read_bytes(),file_name=fn,key=key+'-dl-'+slug(fn))
+
+                    p = evidence_path(iid, fn)
+
+                    if p.exists():
+
+                        st.download_button(
+                            f'View/download {fn}',
+                            p.read_bytes(),
+                            file_name=fn,
+                            key=key + '-dl-' + slug(fn)
+                        )
+
     with m:
-        st.markdown("<div class='label'>Status / measurement</div>",unsafe_allow_html=True)
-        if typ=='qualitative':
-            cur=i.get('status') or 'Not evident';i['status']=st.selectbox('Status',QUAL,index=QUAL.index(cur),key=key+'-status')
-        elif typ=='boolean':
-            cur=i.get('status') or 'False';i['status']=st.selectbox('Status',BOOL,index=BOOL.index(cur),key=key+'-status')
-        elif typ=='qualitative_numeric':
-            cur=i.get('status') or 'Not evident';i['status']=st.selectbox('Qualitative status',QUAL,index=QUAL.index(cur),key=key+'-status')
-            i['numeric_value']=st.number_input(d[5],min_value=0,step=1,value=0 if i.get('numeric_value') is None else int(i['numeric_value']),key=key+'-num')
-        elif typ=='numeric':
-            i['numeric_value']=st.number_input(d[5],min_value=0,step=1,value=0 if i.get('numeric_value') is None else int(i['numeric_value']),key=key+'-num')
-    c1,c2=st.columns([1,1])
+
+        st.markdown(
+            "<div class='label'>Status / measurement</div>",
+            unsafe_allow_html=True
+        )
+
+        if typ == 'qualitative':
+
+            cur = i.get('status') or 'Not evident'
+
+            i['status'] = st.selectbox(
+                'Status',
+                QUAL,
+                index=QUAL.index(cur),
+                key=key + '-status'
+            )
+
+        elif typ == 'boolean':
+
+            cur = i.get('status') or 'False'
+
+            i['status'] = st.selectbox(
+                'Status',
+                BOOL,
+                index=BOOL.index(cur),
+                key=key + '-status'
+            )
+
+        elif typ == 'qualitative_numeric':
+
+            cur = i.get('status') or 'Not evident'
+
+            i['status'] = st.selectbox(
+                'Qualitative status',
+                QUAL,
+                index=QUAL.index(cur),
+                key=key + '-status'
+            )
+
+            i['numeric_value'] = st.number_input(
+                d[5],
+                min_value=0,
+                step=1,
+                value=(
+                    0
+                    if i.get('numeric_value') is None
+                    else int(i['numeric_value'])
+                ),
+                key=key + '-num'
+            )
+
+        elif typ == 'numeric':
+
+            i['numeric_value'] = st.number_input(
+                d[5],
+                min_value=0,
+                step=1,
+                value=(
+                    0
+                    if i.get('numeric_value') is None
+                    else int(i['numeric_value'])
+                ),
+                key=key + '-num'
+            )
+
+    c1, c2 = st.columns([1, 1])
+
     with c1:
-        cur=date.fromisoformat(i['date']) if i.get('date') else None
-        x=st.date_input('Recorded date',value=cur,format='YYYY-MM-DD',key=key+'-date');i['date']=x.isoformat() if x else None
-    with c2: st.caption('Changes are saved with “Save Draft”.')
+
+        cur = (
+            date.fromisoformat(i['date'])
+            if i.get('date')
+            else None
+        )
+
+        x = st.date_input(
+            'Recorded date',
+            value=cur,
+            format='YYYY-MM-DD',
+            key=key + '-date'
+        )
+
+        i['date'] = x.isoformat() if x else None
+
+    with c2:
+
+        st.caption(
+            'Changes are saved with “Save Draft”.'
+        )
+
     st.divider()
 
 def indicators_tab(n):
