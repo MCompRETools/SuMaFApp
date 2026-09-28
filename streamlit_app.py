@@ -91,11 +91,11 @@ CSS='''<style>
     margin-top:2px;
 }
 
-#.progress-rule{
-    #font-size:11px;
-    #opacity:.85;
-    #margin-top:2px;
-#}
+.progress-rule{
+    font-size:11px;
+    opacity:.85;
+    margin-top:2px;
+}
 
 </style>'''
 
@@ -431,17 +431,17 @@ def dashboard_progress_bar(n):
         (
             "Sufficient",
             sufficient_colour,
-            f"{required_satisfied}/{required_total} required"
+            f"{required_satisfied}/{required_total} required",
         ),
         (
             "Sufficient+",
             sufficient_plus_colour,
-            f"{dopt_satisfied}/{dopt_total} desirable + optional"
+            f"{dopt_satisfied}/{dopt_total} desirable + optional",
         ),
         (
             "Advanced",
             advanced_colour,
-            f"{all_satisfied}/{all_total} indicators"
+            f"{all_satisfied}/{all_total} indicators",
         ),
     ]
 
@@ -455,8 +455,7 @@ def dashboard_progress_bar(n):
             border-right:1px solid #d9d9d9;
         ">
             <div style="font-weight:700;margin-bottom:6px;">{title}</div>
-            <div style="font-size:13px;margin-bottom:5px;">{detail}</div>
-            #<div style="font-size:11px;color:#666;">{rule}</div>
+            <div style="font-size:13px;">{detail}</div>
         </div>
         """
         for title, colour, detail in segments
@@ -501,7 +500,7 @@ def dashboard():
         "Current maturity level",
         f"Level {reached}"
         if reached
-        else "Not yet at Level 1",
+        else "Level 1 Progress",
     )
 
     m2.metric(
