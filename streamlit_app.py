@@ -510,6 +510,30 @@ def dashboard():
             )
 
 
+def requirement_type_chart(n):
+    """Render the requirement-type percentage chart for a maturity level."""
+    # Reuse the existing percentage chart helper when available.
+    if "percentage_requirement_chart" in globals():
+        return percentage_requirement_chart(n)
+    if "requirement_percentage_chart" in globals():
+        return requirement_percentage_chart(n)
+
+    # Fallback: display the requirement counts used by the dashboard.
+    result = level_progress_condition(n)
+    rows = [
+        {"Requirement type": "Required",
+         "Satisfied": result["required_satisfied"],
+         "Total": result["required_total"]},
+        {"Requirement type": "Desirable + Optional",
+         "Satisfied": result["desirable_optional_satisfied"],
+         "Total": result["desirable_optional_total"]},
+        {"Requirement type": "All",
+         "Satisfied": result["all_satisfied"],
+         "Total": result["all_total"]},
+    ]
+    st.dataframe(rows, use_container_width=True)
+
+
 def assessment():
     st.subheader('Maturity assessment')
     rows=[]
