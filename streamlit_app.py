@@ -53,7 +53,7 @@ LEVELS = {
         ],
     },
     3: {
-        "name": "Measurement",
+        "name": "Sustainability Measurement",
         "desc": "The pipeline systematically tracks qualitative and quantitative metrics across build, test and infrastructure phases.",
         "tip": "Record which metrics you collect, where they are stored and how often they are reviewed.",
         "defaults": [
@@ -64,7 +64,7 @@ LEVELS = {
         ],
     },
     4: {
-        "name": "Optimization",
+        "name": "Sustainability Optimization",
         "desc": "Metric analytics are used to actively optimize resource usage and pipeline efficiency.",
         "tip": "Record the optimizations you made and the measured effect they had.",
         "defaults": [
