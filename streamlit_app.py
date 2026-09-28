@@ -384,7 +384,7 @@ def dashboard_progress_bar(n):
             "Sufficient+",
             sufficient_plus_colour,
             f"{dopt_satisfied}/{dopt_total} desirable + optional",
-            "More than 60% of desirable + optional indicators met",
+            "At least 60% of desirable + optional indicators met",
         ),
         (
             "Advanced",
@@ -487,21 +487,21 @@ def dashboard():
 
     st.divider()
 
-    for col, (n, lv) in zip(
-        st.columns(len(LEVELS)),
-        LEVELS.items(),
-    ):
-        with col.container(border=True):
-            st.markdown(f"**Level {n}**")
-            st.caption(lv['name'])
+    #for col, (n, lv) in zip(
+        #st.columns(len(LEVELS)),
+        #LEVELS.items(),
+    #):
+        #with col.container(border=True):
+            #st.markdown(f"**Level {n}**")
+            #st.caption(lv['name'])
 
-            st.button(
-                "Open",
-                key=f"open-{n}",
-                use_container_width=True,
-                on_click=go,
-                args=(f"level-{n}",),
-            )
+            #st.button(
+                #"Open",
+                #key=f"open-{n}",
+                #use_container_width=True,
+                #on_click=go,
+                #args=(f"level-{n}",),
+            #)
 
 
 def requirement_type_chart(n):
