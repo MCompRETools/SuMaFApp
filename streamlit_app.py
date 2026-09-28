@@ -324,103 +324,109 @@ def level_progress_condition(n):
 
 
 def dashboard_progress_bar(n):
-    """
-    Three-stage horizontal maturity progress bar:
-    Sufficient -> Sufficient+ -> Advanced.
+    """Render one horizontal three-section maturity progress bar."""
+    result = level_progress_condition(n)
 
-    Red = not achieved
-    Yellow = partially met / stage is active but not fully achieved
-    Green = fully achieved
-    """
-    p = level_progress_condition(n)
+    required_total = result["required_total"]
+    required_satisfied = result["required_satisfied"]
+    dopt_total = result["desirable_optional_total"]
+    dopt_satisfied = result["desirable_optional_satisfied"]
+    all_total = result["all_total"]
+    all_satisfied = result["all_satisfied"]
 
-    # Section status:
-    # - Sufficient: green when all required are met, otherwise yellow if
-    #   at least one required indicator is met, otherwise red.
-    # - Sufficient+: green when >60% desirable/optional are met AND
-    #   Sufficient is achieved; yellow when some progress exists.
-    # - Advanced: green only when all indicators are met; yellow when
-    #   some indicators are met; otherwise red.
-    req_partial = (
-        p["required_satisfied"] > 0
-        and not p["sufficient"]
+    sufficient = result["sufficient"]
+    sufficient_plus = result["sufficient_plus"]
+    advanced = result["advanced"]
+
+    def state_colour(met, partial):
+        if met:
+            return "green"
+        if partial:
+            return "yellow"
+        return "red"
+
+    sufficient_colour = state_colour(
+        sufficient,
+        required_satisfied > 0 and required_satisfied < required_total
     )
 
-    des_opt_partial = (
-        p["desirable_optional_satisfied"] > 0
-        and not p["sufficient_plus"]
+    sufficient_plus_partial = (
+        sufficient
+        and dopt_total > 0
+        and dopt_satisfied > 0
+        and dopt_satisfied / dopt_total <= 0.60
     )
 
-    all_partial = (
-        p["all_satisfied"] > 0
-        and not p["advanced"]
+    sufficient_plus_colour = state_colour(
+        sufficient_plus,
+        sufficient_plus_partial
     )
 
-    sufficient_class = (
-        "green"
-        if p["sufficient"]
-        else "yellow"
-        if req_partial
-        else "red"
+    advanced_colour = state_colour(
+        advanced,
+        all_satisfied > 0 and all_satisfied < all_total
     )
 
-    sufficient_plus_class = (
-        "green"
-        if p["sufficient_plus"]
-        else "yellow"
-        if des_opt_partial
-        else "red"
-    )
+    colours = {
+        "red": "#f8d7da",
+        "yellow": "#fff3cd",
+        "green": "#d1e7dd",
+    }
 
-    advanced_class = (
-        "green"
-        if p["advanced"]
-        else "yellow"
-        if all_partial
-        else "red"
-    )
+    segments = [
+        (
+            "Sufficient",
+            sufficient_colour,
+            f"{required_satisfied}/{required_total} required",
+            "All required indicators met",
+        ),
+        (
+            "Sufficient+",
+            sufficient_plus_colour,
+            f"{dopt_satisfied}/{dopt_total} desirable + optional",
+            "More than 60% of desirable + optional indicators met",
+        ),
+        (
+            "Advanced",
+            advanced_colour,
+            f"{all_satisfied}/{all_total} indicators",
+            "All indicators met",
+        ),
+    ]
 
-    req_text = (
-        f"{p['required_satisfied']}/{p['required_total']} required"
-        if p["required_total"]
-        else "No required indicators"
-    )
-
-    des_opt_text = (
-        f"{p['desirable_optional_satisfied']}/"
-        f"{p['desirable_optional_total']} desirable + optional"
-        if p["desirable_optional_total"]
-        else "No desirable/optional indicators"
-    )
-
-    all_text = (
-        f"{p['all_satisfied']}/{p['all_total']} indicators"
+    segment_html = "".join(
+        f"""
+        <div style="
+            flex:1;
+            background:{colours[colour]};
+            padding:12px 14px;
+            min-height:82px;
+            border-right:1px solid #d9d9d9;
+        ">
+            <div style="font-weight:700;margin-bottom:6px;">{title}</div>
+            <div style="font-size:13px;margin-bottom:5px;">{detail}</div>
+            <div style="font-size:11px;color:#666;">{rule}</div>
+        </div>
+        """
+        for title, colour, detail, rule in segments
     )
 
     st.markdown(
         f"""
-        <div class="level-progress">
-            <div class="progress-segment {sufficient_class}">
-                <div class="progress-title">Sufficient</div>
-                <div class="progress-detail">{req_text}</div>
-                <div class="progress-rule">All required indicators</div>
-            </div>
-
-            <div class="progress-segment {sufficient_plus_class}">
-                <div class="progress-title">Sufficient+</div>
-                <div class="progress-detail">{des_opt_text}</div>
-                <div class="progress-rule">More than 60%</div>
-            </div>
-
-            <div class="progress-segment {advanced_class}">
-                <div class="progress-title">Advanced</div>
-                <div class="progress-detail">{all_text}</div>
-                <div class="progress-rule">All indicators</div>
-            </div>
+        <div style="
+            display:flex;
+            width:100%;
+            overflow:hidden;
+            border:1px solid #d9d9d9;
+            border-radius:8px;
+            margin-top:8px;
+        ">
+            {segment_html}
         </div>
         """,
         unsafe_allow_html=True,
     )
+
 
 
 def dashboard():
@@ -476,8 +482,8 @@ def dashboard():
             st.markdown(
                 f"**Level {n} – {lv['name']}**"
             )
-
             dashboard_progress_bar(n)
+
 
     st.divider()
 
@@ -485,21 +491,9 @@ def dashboard():
         st.columns(len(LEVELS)),
         LEVELS.items(),
     ):
-        done, total = counts(n)
-
         with col.container(border=True):
             st.markdown(f"**Level {n}**")
             st.caption(lv['name'])
-
-            st.progress(
-                done / total
-                if total
-                else 0.0
-            )
-
-            st.caption(
-                f"{done}/{total} · {status(n)}"
-            )
 
             st.button(
                 "Open",
