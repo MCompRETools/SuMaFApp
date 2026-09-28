@@ -31,8 +31,7 @@ LEVELS = {
         "name": "Scope Definition",
         "desc": "Sustainability is recognized as a project concern, but practices are largely ad hoc. "
                 "Sustainability objectives and dimensions are not yet systematically defined.",
-        "tip": "Record the activities, discussions and documents that show early consideration "
-               "of sustainability in your DevOps project.",
+        "tip": "This is best to do at project initiation. If project is at later stages, it is important that at least some indicators are met.",
         "defaults": [
             ("Stakeholder Awareness of Sustainability Inclusion", "At project initiation, stakeholders communicate sustainability objectives with the client and team members. Such as ESG compliance at EU. They openly discuss what is possible and what not in order to comply with guidelines or standards."),
             ("Awareness of environmental, technical and social sustainability", "Team members take a mandatory course or training on sustainability concepts."),
