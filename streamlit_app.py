@@ -278,8 +278,8 @@ def activity_row(n, a):
     a["status"] = c[5].selectbox("Status", STATUSES, index=STATUSES.index(a["status"]),
                                  format_func=lambda s: f"{STATUS_DOT[s]} {s}", key=f"{k}-status",
                                  label_visibility="collapsed")
-    with c[6].popover("⋯"):
-        st.button("Delete activity", key=f"{k}-del", on_click=delete_activity, args=(n, a["id"]))
+    #with c[6].popover("⋯"):
+        #st.button("Delete activity", key=f"{k}-del", on_click=delete_activity, args=(n, a["id"]))
     st.divider()
 
 
