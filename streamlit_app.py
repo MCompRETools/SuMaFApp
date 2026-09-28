@@ -23,11 +23,11 @@ L1=[
 ('L1-09','Awareness of existing tool capabilities and limitations','The team shares knowledge about build, testing and related tools, including their capabilities and limitations for sustainability.',['notes'],'boolean',None,'optional'),
 ]
 L2=[
-('L2-01','Sustainability skill acquired','Team member have done prior course or completed ones before design starts',['upload'],'boolean',None,'required'),
-('L2-02','Collaboration and knowledge-sharing practices','Team lead conducts exercises to build collective knowledge such as- given a set of competing features and observe what they prioritise.',['notes'],'qualitative_numeric','Number of sessions done','required'),
-('L2-03','Awareness of accessibility and inclusivity','Team members use documented diverse personas/stakeholder groups and discussion of their needs (role-based sustainability concerns)',['notes','upload'],'numeric','Number of role based sustainability goals identified', 'desirable'),
-('L2-04','Sustainability as a parameter during backlog prioritization','Sustainability considerations are explicitly discussed and documented when prioritizing competing features or user stories. Relevant environmental, technical, and social impacts are considered alongside business and technical priorities.',['notes'], 'numeric','Number of items or features resolved for sustainability impact','desirable'),
-('L2-05','Reuse of CI/CD components encouraged','The team actively identifies existing CI/CD workflows, scripts, actions, configurations, and pipeline components rather than unnecessarily creating duplicate components.',['notes'], 'qualitative_numeric','Number of reused components estimated','required'),
+('L2-01','Sustainability skill acquired','Team member have done prior course or completed ones before design starts',['upload'],'qualitative',None,'required'),
+('L2-02','Collaboration and knowledge-sharing practices','Team lead conducts exercises to build collective knowledge such as- given a set of competing features and observe what they prioritise.',['notes','upload'],'numeric','Number of sessions done','required'),
+('L2-03','Awareness of accessibility and inclusivity','Team members use documented diverse personas/stakeholder groups and discussion of their needs (role-based sustainability concerns)',['notes','upload'],'qualitative_numeric','Number of role based sustainability goals identified', 'desirable'),
+('L2-04','Sustainability as a parameter during backlog prioritization','Sustainability considerations are explicitly discussed and documented when prioritizing competing features or user stories. Relevant environmental, technical, and social impacts are considered alongside business and technical priorities.',['notes'], 'qualitative_numeric','Number of items or features resolved for sustainability impact','desirable'),
+('L2-05','Reuse of CI/CD components encouraged','The team actively identifies existing CI/CD workflows, scripts, actions, configurations, and pipeline components rather than unnecessarily creating duplicate components.',['notes'], 'numeric','Number of reused components estimated','required'),
 ('L2-06','Burnout risks considered during planning','Sprint planning evaluates team workload and capacity against delivery demands at any instance k. Also identifies potential burnout risks, and adjusts task allocation or delivery commitments where excessive workload or overtime is identified.',['notes','upload'],'numeric','Estimated overtime hours','required'),
 ('L2-07','Knowledge sharing incorporated into workflows','Activities such as sprint planning, reviews, retrospectives, technical discussions, or workshops shared among team.',['notes'],'qualitative',None,'desirable'),
 ('L2-08','Tool support for reusable workflows','Planned pipeline integrates common CI/CD workflow components reducing unnecessary duplication of workflow configurations.',['notes'],'boolean',None,'desirable'),
@@ -235,9 +235,8 @@ def indicator_card(n,i,d):
 
 def indicators_tab(n):
     a=inds(n); ds=defs(n)
-    if not a: st.info(f'Level {n} is under Progress.');return
-    if n==1: st.subheader(f'Level {n} Indicators');st.caption('This maturity is best achieved at project initiation, but not restricted to it.')
-    if n==2: st.subheader(f'Level {n} Indicators');st.caption('This maturity is best achieved at feature planning stage. The indicators tells you if your approach is sustaianble based on your input evidence.')
+    if not a: st.info(f'Level {n} does not have indicators configured yet.');return
+    st.subheader(f'Level {n} Indicators');st.caption('Evidence and assessment fields are defined separately for each indicator.')
     pages=max(1,ceil(len(a)/PAGE_SIZE));pk=f'pg-{n}';pg=min(st.session_state.get(pk,0),pages-1)
     for i in a[pg*PAGE_SIZE:(pg+1)*PAGE_SIZE]:indicator_card(n,i,ds[i['id']])
     lo=pg*PAGE_SIZE+1;hi=min((pg+1)*PAGE_SIZE,len(a));_,info,prev,nxt=st.columns([6,1.2,.5,.5]);info.caption(f'{lo}-{hi} of {len(a)}');prev.button('‹',disabled=pg==0,key=f'p-{n}',on_click=lambda:st.session_state.__setitem__(pk,pg-1));nxt.button('›',disabled=pg>=pages-1,key=f'n-{n}',on_click=lambda:st.session_state.__setitem__(pk,pg+1))
@@ -289,17 +288,16 @@ def go(page):
 
 def level_progress_condition(n):
     """
-    Return the dashboard condition for a level.
+    Dashboard progress conditions.
 
     Sufficient:
         All required indicators are satisfied.
 
     Sufficient+:
-        Sufficient is achieved AND more than 60% of desirable + optional
-        indicators are satisfied.
+        More than 30% of desirable + optional indicators are satisfied.
 
     Advanced:
-        All indicators (required + desirable + optional) are satisfied.
+        At least 80% of all indicators are satisfied.
     """
     a = inds(n)
 
@@ -343,11 +341,13 @@ def level_progress_condition(n):
         for i in a
     )
 
-    required_ok = (
+    # Condition 1: all required indicators must be met.
+    sufficient = (
         bool(required)
         and required_satisfied == len(required)
     )
 
+    # Condition 2: more than 30% of desirable + optional indicators.
     desirable_optional_ratio = (
         desirable_optional_satisfied / len(desirable_optional)
         if desirable_optional
@@ -355,14 +355,13 @@ def level_progress_condition(n):
     )
 
     sufficient_plus = (
-        required_ok
-        and desirable_optional_ratio > 0.60
+        desirable_optional_ratio > 0.30
     )
 
-    advanced = (
-        len(a) > 0
-        and all_satisfied == len(a)
-    )
+    # Condition 3: at least 80% of all indicators.
+    overall_ratio = all_satisfied / len(a)
+
+    advanced = overall_ratio >= 0.80
 
     return {
         "required_total": len(required),
@@ -371,10 +370,11 @@ def level_progress_condition(n):
         "desirable_optional_satisfied": desirable_optional_satisfied,
         "all_total": len(a),
         "all_satisfied": all_satisfied,
-        "sufficient": required_ok,
+        "sufficient": sufficient,
         "sufficient_plus": sufficient_plus,
         "advanced": advanced,
     }
+
 
 
 def dashboard_progress_bar(n):
@@ -405,10 +405,9 @@ def dashboard_progress_bar(n):
     )
 
     sufficient_plus_partial = (
-        sufficient
-        and dopt_total > 0
+        dopt_total > 0
         and dopt_satisfied > 0
-        and dopt_satisfied / dopt_total <= 0.60
+        and dopt_satisfied / dopt_total <= 0.30
     )
 
     sufficient_plus_colour = state_colour(
@@ -418,7 +417,8 @@ def dashboard_progress_bar(n):
 
     advanced_colour = state_colour(
         advanced,
-        all_satisfied > 0 and all_satisfied < all_total
+        all_satisfied > 0 and all_satisfied / all_total < 0.80
+        if all_total else False
     )
 
     colours = {
@@ -438,13 +438,13 @@ def dashboard_progress_bar(n):
             "Sufficient+",
             sufficient_plus_colour,
             f"{dopt_satisfied}/{dopt_total} desirable + optional",
-            "More than 60% of desirable + optional indicators met",
+            "More than 30% of desirable + optional indicators met",
         ),
         (
             "Advanced",
             advanced_colour,
             f"{all_satisfied}/{all_total} indicators",
-            "All indicators met",
+            "At least 80% of indicators met",
         ),
     ]
 
