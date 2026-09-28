@@ -115,9 +115,51 @@ def load_projects():
 def save_projects(): PROJECTS_FILE.write_text(json.dumps(st.session_state.projects,indent=2))
 def load_project(name):
     p=DATA_DIR/f'{slug(name)}.json'
-    if not p.exists():return new_data()
-    try:x=json.loads(p.read_text()); return x if 'indicators' in x.get('1',{}) else new_data()
-    except:return new_data()
+    if not p.exists():
+        return new_data()
+
+    try:
+        existing = json.loads(p.read_text())
+    except:
+        return new_data()
+
+    # Migrate saved project data when new indicators are added to the
+    # maturity model. Existing evidence/status/notes are preserved.
+    data = new_data()
+
+    for n in LEVELS:
+        key = str(n)
+        old_level = existing.get(key, {})
+        old_indicators = {
+            i.get('id'): i
+            for i in old_level.get('indicators', [])
+            if i.get('id')
+        }
+
+        for indicator in data[key]['indicators']:
+            iid = indicator['id']
+            if iid in old_indicators:
+                saved = old_indicators[iid]
+
+                # Preserve user-entered project data.
+                indicator['evidence'] = saved.get('evidence', [])
+                indicator['notes'] = saved.get('notes', '')
+                indicator['date'] = saved.get('date')
+                indicator['status'] = saved.get('status')
+                indicator['numeric_value'] = saved.get('numeric_value')
+
+                # Keep the current model's requirement classification.
+                indicator['requirement_type'] = LEVELS[n]['indicators'][
+                    next(
+                        idx for idx, d in enumerate(LEVELS[n]['indicators'])
+                        if d[0] == iid
+                    )
+                ][6]
+
+        data[key]['notes'] = old_level.get('notes', '')
+        data[key]['complete'] = old_level.get('complete', False)
+
+    return data
 def save_project(): (DATA_DIR/f'{slug(st.session_state.project)}.json').write_text(json.dumps(st.session_state.data,indent=2))
 def init():
     DATA_DIR.mkdir(exist_ok=True); s=st.session_state
