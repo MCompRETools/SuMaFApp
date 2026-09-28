@@ -10,15 +10,15 @@ DATA_DIR=Path('data'); PROJECTS_FILE=DATA_DIR/'projects.json'; PAGE_SIZE=5
 QUAL=['Active','Suggested','Not evident']; BOOL=['True','False']
 
 L1=[
-('L1-01','Stakeholder awareness of sustainability goals','At project initiation, stakeholders communicate sustainability objectives with the client and team members, including relevant guidelines or standards, and discuss what is and is not feasible.',['notes','upload'],'qualitative',None),
-('L1-02','Awareness of environmental, technical and social sustainability','Team members complete a mandatory course or training on environmental, technical and social sustainability concepts.',['upload'],'boolean',None),
-('L1-03','Awareness of energy or resource implications','Team members discuss how builds, testing, deployments and infrastructure usage can have energy and resource implications.',['notes'],'qualitative_numeric','Number of sessions done'),
-('L1-04','Awareness of technical debt impact','The team lead or Technical Architect provides guidance on how technical debt can affect maintainability, software longevity, development effort and long-term sustainability.',['notes'],'boolean',None),
-('L1-05','Awareness of developer well-being and burnout risks','The manager communicates how workload, excessive overtime, repetitive activities, cognitive load and related factors may affect developer well-being and long-term productivity.',['notes'],'boolean',None),
-('L1-06','Sustainability objectives discussed during planning','Sustainability objectives are explicitly discussed during project planning, including relevant environmental, technical and social concerns and their implications for project decisions.',['notes','upload'],'numeric','Number of sustainability categories/dimensions'),
-('L1-07','Sustainability dimensions identified for the project','Relevant sustainability dimensions (environmental, technical, social and, where applicable, economic) are identified and recorded in the project dashboard.',['notes','upload'],'boolean',None),
-('L1-08','Initial identification of DevOps tools supporting sustainability assessment','Teams actively review the capabilities of DevOps tools from a sustainability perspective.',['notes'],'qualitative',None),
-('L1-09','Awareness of existing tool capabilities and limitations','The team shares knowledge about build, testing and related tools, including their capabilities and limitations for sustainability.',['notes'],'boolean',None),
+('L1-01','Stakeholder awareness of sustainability goals','At project initiation, stakeholders communicate sustainability objectives with the client and team members, including relevant guidelines or standards, and discuss what is and is not feasible.',['notes','upload'],'qualitative',None,'desirable'),
+('L1-02','Awareness of environmental, technical and social sustainability','Team members complete a mandatory course or training on environmental, technical and social sustainability concepts.',['upload'],'boolean',None,'required'),
+('L1-03','Awareness of energy or resource implications','Team members discuss how builds, testing, deployments and infrastructure usage can have energy and resource implications.',['notes'],'qualitative_numeric','Number of sessions done','desirable'),
+('L1-04','Awareness of technical debt impact','The team lead or Technical Architect provides guidance on how technical debt can affect maintainability, software longevity, development effort and long-term sustainability.',['notes'],'boolean',None,'desirable'),
+('L1-05','Awareness of developer well-being and burnout risks','The manager communicates how workload, excessive overtime, repetitive activities, cognitive load and related factors may affect developer well-being and long-term productivity.',['notes'],'boolean',None,'required'),
+('L1-06','Sustainability objectives discussed during planning','Sustainability objectives are explicitly discussed during project planning, including relevant environmental, technical and social concerns and their implications for project decisions.',['notes','upload'],'numeric','Number of sustainability categories/dimensions','desirable'),
+('L1-07','Sustainability dimensions identified for the project','Relevant sustainability dimensions (environmental, technical, social and, where applicable, economic) are identified and recorded in the project dashboard.',['notes','upload'],'boolean',None,'desirable'),
+('L1-08','Initial identification of DevOps tools supporting sustainability assessment','Teams actively review the capabilities of DevOps tools from a sustainability perspective.',['notes'],'qualitative',None,'optional'),
+('L1-09','Awareness of existing tool capabilities and limitations','The team shares knowledge about build, testing and related tools, including their capabilities and limitations for sustainability.',['notes'],'boolean',None,'optional'),
 ]
 
 LEVELS={1:{'name':'Scope Definition','desc':'Sustainability is recognized as a project concern, but practices are largely ad hoc. Sustainability objectives and dimensions are not yet systematically defined.','indicators':L1},2:{'name':'Sustainability Awareness','desc':'Defined sustainability requirements and repeatable practices are embedded into CI/CD planning.','indicators':[]},3:{'name':'Measurement','desc':'The pipeline systematically tracks qualitative and quantitative sustainability metrics.','indicators':[]},4:{'name':'Optimization','desc':'Metric analytics are used to actively optimize resource usage and pipeline efficiency.','indicators':[]},5:{'name':'Autonomous Sustainability','desc':'AI models and predictive analytics support or automate sustainability-oriented pipeline optimization.','indicators':[]}}
@@ -30,7 +30,13 @@ CSS='''<style>
 
 def slug(x): return re.sub(r'[^a-z0-9]+','-',x.lower()).strip('-') or 'project'
 def template(d):
-    return {'id':d[0],'title':d[1],'description':d[2],'evidence':[],'notes':'','date':None,'status':('Not evident' if d[4]=='qualitative' else 'False' if d[4]=='boolean' else None),'numeric_value':None}
+    return {
+        'id': d[0], 'title': d[1], 'description': d[2],
+        'evidence': [], 'notes': '', 'date': None,
+        'status': ('Not evident' if d[4]=='qualitative' else 'False' if d[4]=='boolean' else None),
+        'numeric_value': None, 'requirement_type': d[6]
+    }
+
 def new_data(): return {str(n):{'indicators':[template(d) for d in lv['indicators']],'notes':'','complete':False} for n,lv in LEVELS.items()}
 def load_projects():
     try:return json.loads(PROJECTS_FILE.read_text()) if PROJECTS_FILE.exists() else ['Example DevOps Project']
@@ -49,11 +55,16 @@ def init():
 def lv(n):return st.session_state.data[str(n)]
 def defs(n):return {d[0]:d for d in LEVELS[n]['indicators']}
 def inds(n):return lv(n).get('indicators',[])
-def complete(i,d):
+def satisfied(i,d):
     typ=d[4]
-    if typ=='qualitative':return i.get('status') in QUAL
-    if typ=='boolean':return i.get('status')=='True'
-    return i.get('numeric_value') is not None and i.get('numeric_value')>=0
+    if typ=='qualitative': return i.get('status')=='Active'
+    if typ=='boolean': return i.get('status')=='True'
+    if typ=='qualitative_numeric': return i.get('status')=='Active' and i.get('numeric_value') is not None and i.get('numeric_value')>0
+    if typ=='numeric': return i.get('numeric_value') is not None and i.get('numeric_value')>0
+    return False
+
+def complete(i,d):
+    return satisfied(i,d)
 def counts(n):
     a=inds(n); ds=defs(n); return sum(complete(i,ds[i['id']]) for i in a),len(a)
 def status(n):
@@ -76,8 +87,8 @@ def save_uploads(i,files):
         if p.name not in i['evidence']:i['evidence'].append(p.name)
 
 def indicator_card(n,i,d):
-    iid=i['id']; key=f'{slug(st.session_state.project)}-{iid}'; typ=d[4]
-    st.markdown(f"<div class='card'><div class='title'><span class='id'>{iid}</span>{i['title']}</div><div class='obs'><b>Observable condition:</b> {i['description']}</div></div>",unsafe_allow_html=True)
+    iid=i['id']; key=f'{slug(st.session_state.project)}-{iid}'; typ=d[4]; requirement=d[6].title()
+    st.markdown(f"<div class='card'><div class='title'><span class='id'>{iid}</span>{i['title']}</div><div class='obs'><b>Type:</b> {requirement}<br><b>Observable condition:</b> {i['description']}</div></div>",unsafe_allow_html=True)
     e,m=st.columns([1.5,1],gap='large')
     with e:
         st.markdown("<div class='label'>Evidence</div>",unsafe_allow_html=True)
@@ -159,15 +170,37 @@ def sidebar():
         st.divider();st.caption('🌿 Smaller footprints. Stronger software.')
 def dashboard():
     st.subheader('Dashboard');r=achieved();done=sum(counts(n)[0] for n in LEVELS);tot=sum(counts(n)[1] for n in LEVELS);c1,c2,c3=st.columns(3);c1.metric('Current maturity level',f'Level {r}' if r else 'Not yet at Level 1');c2.metric('Indicators assessed',f'{done}/{tot}');c3.metric('Next level',f'Level {r+1}' if r<5 else 'All levels done');st.progress(done/tot if tot else 0)
+def requirement_type_chart(n):
+    a=inds(n)
+    if not a:return
+    ds=defs(n); order=['Required','Desirable','Optional']
+    totals={x:0 for x in order}; sat={x:0 for x in order}
+    for i in a:
+        d=ds[i['id']]; typ=d[6].title(); totals[typ]+=1
+        if satisfied(i,d): sat[typ]+=1
+    chart_df=pd.DataFrame({'Requirement type':order,'Satisfied':[sat[x] for x in order]}).set_index('Requirement type')
+    st.markdown(f"#### Level {n} – {LEVELS[n]['name']}: satisfied indicators")
+    st.caption("Satisfied means Active for qualitative indicators, True for Boolean indicators, and a positive numeric value for quantitative indicators. Indicator 3 requires Active status and at least one recorded session.")
+    st.bar_chart(chart_df,use_container_width=True)
+    st.dataframe(pd.DataFrame({'Requirement type':order,'Satisfied':[sat[x] for x in order],'Total':[totals[x] for x in order]}),hide_index=True,use_container_width=True)
+
+
 def assessment():
-    st.subheader('Maturity assessment');rows=[]
-    for n,x in LEVELS.items():d,t=counts(n);rows.append({'Level':n,'Name':x['name'],'Assessed':f'{d}/{t}','Progress %':round(100*d/t) if t else 0,'Status':status(n)})
+    st.subheader('Maturity assessment')
+    rows=[]
+    for n,x in LEVELS.items():
+        d,t=counts(n); rows.append({'Level':n,'Name':x['name'],'Satisfied':f'{d}/{t}','Progress %':round(100*d/t) if t else 0,'Status':status(n)})
     st.dataframe(pd.DataFrame(rows),hide_index=True,use_container_width=True)
+    active_levels=[n for n in LEVELS if inds(n)]
+    if active_levels:
+        st.divider(); st.subheader('Satisfied indicators by requirement type')
+        for n in active_levels: requirement_type_chart(n)
+
 def reports():
     st.subheader('Reports');rows=[]
     for n,x in LEVELS.items():
         ds=defs(n)
-        for i in inds(n):rows.append({'Level':n,'Indicator ID':i['id'],'Indicator':i['title'],'Measurement type':ds[i['id']][4],'Status':i.get('status'),'Numeric value':i.get('numeric_value'),'Notes':i.get('notes'),'Date':i.get('date'),'Evidence files':'; '.join(i.get('evidence',[]))})
+        for i in inds(n):rows.append({'Level':n,'Requirement type':ds[i['id']][6].title(),'Indicator ID':i['id'],'Indicator':i['title'],'Measurement type':ds[i['id']][4],'Status':i.get('status'),'Numeric value':i.get('numeric_value'),'Satisfied':satisfied(i,ds[i['id']]),'Notes':i.get('notes'),'Date':i.get('date'),'Evidence files':'; '.join(i.get('evidence',[]))})
     df=pd.DataFrame(rows);st.dataframe(df,hide_index=True,use_container_width=True);stem=slug(st.session_state.project);c1,c2=st.columns(2);c1.download_button('Download CSV',df.to_csv(index=False),f'{stem}-assessment.csv','text/csv');c2.download_button('Download JSON',json.dumps(st.session_state.data,indent=2),f'{stem}-assessment.json','application/json')
 def settings():
     s=st.session_state;st.subheader('Settings');s.user=st.text_input('Your initials',s.user,max_chars=3).upper();name=st.text_input('New project',placeholder='e.g. Payments platform')
