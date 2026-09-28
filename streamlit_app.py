@@ -91,11 +91,11 @@ CSS='''<style>
     margin-top:2px;
 }
 
-.progress-rule{
-    font-size:11px;
-    opacity:.85;
-    margin-top:2px;
-}
+#.progress-rule{
+    #font-size:11px;
+    #opacity:.85;
+    #margin-top:2px;
+#}
 
 </style>'''
 
@@ -456,7 +456,7 @@ def dashboard_progress_bar(n):
         ">
             <div style="font-weight:700;margin-bottom:6px;">{title}</div>
             <div style="font-size:13px;margin-bottom:5px;">{detail}</div>
-            <div style="font-size:11px;color:#666;">{rule}</div>
+            #<div style="font-size:11px;color:#666;">{rule}</div>
         </div>
         """
         for title, colour, detail in segments
