@@ -215,12 +215,12 @@ def level_page(n):
     with d:progress_tab(n)
     st.divider();back,_,save,complete_btn=st.columns([1.3,4,1,1.6]);back.button('← Back to Overview',on_click=lambda:st.session_state.__setitem__('page','assessment'),use_container_width=True)
     if save.button('Save Draft',use_container_width=True):save_project();st.toast('Draft saved',icon='💾')
-    if lv(n)['complete']:
-        if complete_btn.button('Reopen Level',use_container_width=True):lv(n)['complete']=False;save_project();st.rerun()
-    elif complete_btn.button(f'Mark Level {n} as Complete',type='primary',use_container_width=True):
-        if t:=counts(n)[1]:
-            if counts(n)[0]==t:lv(n)['complete']=True;save_project();st.toast(f'Level {n} marked complete',icon='🎉');st.rerun()
-            else:st.warning(f'{t-counts(n)[0]} indicator(s) still require a valid assessment.')
+    #if lv(n)['complete']:
+        #if complete_btn.button('Reopen Level',use_container_width=True):lv(n)['complete']=False;save_project();st.rerun()
+    #elif complete_btn.button(f'Mark Level {n} as Complete',type='primary',use_container_width=True):
+        #if t:=counts(n)[1]:
+            #if counts(n)[0]==t:lv(n)['complete']=True;save_project();st.toast(f'Level {n} marked complete',icon='🎉');st.rerun()
+            #else:st.warning(f'{t-counts(n)[0]} indicator(s) still require a valid assessment.')
 def header():
     s=st.session_state;c1,c2,c3=st.columns([5,3,.6],vertical_alignment='center');c1.markdown("<div class='brand'>🌿 Sustainability Maturity Tool<br><span>Measure • Improve • Build a Greener DevOps</span></div>",unsafe_allow_html=True);c2.selectbox('Project',s.projects,key='project',on_change=lambda:None);c3.markdown(f"<div class='avatar'>{s.user}</div>",unsafe_allow_html=True);st.divider()
 def sidebar():
