@@ -6,6 +6,8 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(page_title='Sustainability Maturity Tool', page_icon='🌿', layout='wide')
+
+st.session_state.setdefault('page', 'dashboard')
 DATA_DIR=Path('data'); PROJECTS_FILE=DATA_DIR/'projects.json'; PAGE_SIZE=5
 QUAL=['Active','Suggested','Not evident']; BOOL=['True','False']
 
@@ -226,6 +228,11 @@ def sidebar():
     with st.sidebar:
         for k,label in nav:st.button(label,key='nav-'+k,use_container_width=True,on_click=lambda k=k:st.session_state.__setitem__('page',k),type='primary' if p==k else 'secondary')
         st.divider();st.caption('🌿 Smaller footprints. Stronger software.')
+def go(page):
+    """Set the current Streamlit page."""
+    st.session_state.page = page
+
+
 def level_progress_condition(n):
     """
     Return the dashboard condition for a level.
