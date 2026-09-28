@@ -34,7 +34,7 @@ LEVELS = {
         "tip": "Record the activities, discussions and documents that show early consideration "
                "of sustainability in your DevOps project.",
         "defaults": [
-            ("Stakeholder Awareness of Sustainability Inclusion", "At project initiation, stakeholders communicate sustainability objectives with the client and team members. Such as ESG compliance at EU. They openly discuss what is \\ possible and what not in order to comply with guidelines or standards."),
+            ("Stakeholder Awareness of Sustainability Inclusion", "At project initiation, stakeholders communicate sustainability objectives with the client and team members. Such as ESG compliance at EU. They openly discuss what is possible and what not in order to comply with guidelines or standards."),
             ("Identify relevant sustainability dimensions", "Considered environmental, social and economic aspects for the project scope."),
             ("Capture initial sustainability goals", "Documented preliminary goals (e.g. reduce energy use, promote inclusive design)."),
             ("Assign responsibility", "Identified team member to champion sustainability discussions."),
