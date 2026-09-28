@@ -13,7 +13,7 @@ QUAL=['Active','Suggested','Not evident']; BOOL=['True','False']
 
 L1=[
 ('L1-01','Stakeholder awareness of sustainability goals','At project initiation, stakeholders communicate sustainability objectives with the client and team members, including relevant guidelines or standards, and discuss what is and is not feasible.',['notes','upload'],'qualitative',None,'desirable'),
-('L1-02','Awareness of environmental, technical and social sustainability','Team members complete a mandatory course or training on environmental, technical and social sustainability concepts.',['upload'],'boolean',None,'required'),
+('L1-02','Awareness of environmental, technical and social sustainability','Team members participate on a mandatory course or training on environmental, technical and social sustainability concepts.',['notes','upload'],'boolean',None,'required'),
 ('L1-03','Awareness of energy or resource implications','Team members discuss how builds, testing, deployments and infrastructure usage can have energy and resource implications.',['notes'],'qualitative_numeric','Number of sessions done','desirable'),
 ('L1-04','Awareness of technical debt impact','The team lead or Technical Architect provides guidance on how technical debt can affect maintainability, software longevity, development effort and long-term sustainability.',['notes'],'boolean',None,'desirable'),
 ('L1-05','Awareness of developer well-being and burnout risks','The manager communicates how workload, excessive overtime, repetitive activities, cognitive load and related factors may affect developer well-being and long-term productivity.',['notes'],'boolean',None,'required'),
@@ -22,8 +22,19 @@ L1=[
 ('L1-08','Initial identification of DevOps tools supporting sustainability assessment','Teams actively review the capabilities of DevOps tools from a sustainability perspective.',['notes'],'qualitative',None,'optional'),
 ('L1-09','Awareness of existing tool capabilities and limitations','The team shares knowledge about build, testing and related tools, including their capabilities and limitations for sustainability.',['notes'],'boolean',None,'optional'),
 ]
+L2=[
+('L2-01','Sustainability skill acquired','Team member have done prior course or completed ones before design starts',['upload'],'qualitative',None,'required'),
+('L2-02','Collaboration and knowledge-sharing practices','Team lead conducts exercises to build collective knowledge such as- given a set of competing features and observe what they prioritise.',['notes','upload'],'numeric','Number of sessions done','required'),
+('L2-03','Awareness of accessibility and inclusivity','Team members use documented diverse personas/stakeholder groups and discussion of their needs (role-based sustainability concerns)',['notes','upload'],'qualitative_numeric','Number of role based sustainability goals identified', 'desirable'),
+('L2-04','Sustainability as a parameter during backlog prioritization','Sustainability considerations are explicitly discussed and documented when prioritizing competing features or user stories. Relevant environmental, technical, and social impacts are considered alongside business and technical priorities.',['notes'], 'qualitative_numeric','Number of items or features resolved for sustainability impact','desirable'),
+('L2-05','Reuse of CI/CD components encouraged','The team actively identifies existing CI/CD workflows, scripts, actions, configurations, and pipeline components rather than unnecessarily creating duplicate components.',['notes'], 'numeric','Number of reused components estimated','required'),
+('L2-06','Burnout risks considered during planning','Sprint planning evaluates team workload and capacity against delivery demands at any instance k. Also identifies potential burnout risks, and adjusts task allocation or delivery commitments where excessive workload or overtime is identified.',['notes','upload'],'numeric','Estimated overtime hours','required'),
+('L2-07','Knowledge sharing incorporated into workflows','Activities such as sprint planning, reviews, retrospectives, technical discussions, or workshops shared among team.',['notes'],'qualitative',None,'desirable'),
+('L2-08','Tool support for reusable workflows','Planned pipeline integrates common CI/CD workflow components reducing unnecessary duplication of workflow configurations.',['notes'],'boolean',None,'desirable'),
+('L2-09','Available IDE support for identifying inefficient code','IDE selected provides mechanisms such as static analysis, or plugins that can identify potentially inefficient or resource- intensive code during development',['notes'],'numeric','Number of sustainability categories/dimensions','optional'),
+]
 
-LEVELS={1:{'name':'Scope Definition','desc':'Sustainability is recognized as a project concern, but practices are largely ad hoc. Sustainability objectives and dimensions are not yet systematically defined.','indicators':L1},2:{'name':'Sustainability Awareness','desc':'Defined sustainability requirements and repeatable practices are embedded into CI/CD planning.','indicators':[]},3:{'name':'Measurement','desc':'The pipeline systematically tracks qualitative and quantitative sustainability metrics.','indicators':[]},4:{'name':'Optimization','desc':'Metric analytics are used to actively optimize resource usage and pipeline efficiency.','indicators':[]},5:{'name':'Autonomous Sustainability','desc':'AI models and predictive analytics support or automate sustainability-oriented pipeline optimization.','indicators':[]}}
+LEVELS={1:{'name':'Scope Definition','desc':'Sustainability is recognized as a project concern, but practices are largely ad hoc. Sustainability objectives and dimensions are not yet systematically defined.','indicators':L1},2:{'name':'Sustainability Awareness','desc':'Defined sustainability requirements and repeatable practices are embedded into CI/CD planning.','indicators':L2},3:{'name':'Measurement','desc':'The pipeline systematically tracks qualitative and quantitative sustainability metrics.','indicators':[]},4:{'name':'Optimization','desc':'Metric analytics are used to actively optimize resource usage and pipeline efficiency.','indicators':[]},5:{'name':'Autonomous Sustainability','desc':'AI models and predictive analytics support or automate sustainability-oriented pipeline optimization.','indicators':[]}}
 
 CSS='''<style>
 :root{--g:#1f7a4d;--gl:#e6f2ea;--gb:#cfe5d6}
@@ -215,12 +226,12 @@ def level_page(n):
     with d:progress_tab(n)
     st.divider();back,_,save,complete_btn=st.columns([1.3,4,1,1.6]);back.button('← Back to Overview',on_click=lambda:st.session_state.__setitem__('page','assessment'),use_container_width=True)
     if save.button('Save Draft',use_container_width=True):save_project();st.toast('Draft saved',icon='💾')
-    if lv(n)['complete']:
-        if complete_btn.button('Reopen Level',use_container_width=True):lv(n)['complete']=False;save_project();st.rerun()
-    elif complete_btn.button(f'Mark Level {n} as Complete',type='primary',use_container_width=True):
-        if t:=counts(n)[1]:
-            if counts(n)[0]==t:lv(n)['complete']=True;save_project();st.toast(f'Level {n} marked complete',icon='🎉');st.rerun()
-            else:st.warning(f'{t-counts(n)[0]} indicator(s) still require a valid assessment.')
+    #if lv(n)['complete']:
+        #if complete_btn.button('Reopen Level',use_container_width=True):lv(n)['complete']=False;save_project();st.rerun()
+    #elif complete_btn.button(f'Mark Level {n} as Complete',type='primary',use_container_width=True):
+        #if t:=counts(n)[1]:
+            #if counts(n)[0]==t:lv(n)['complete']=True;save_project();st.toast(f'Level {n} marked complete',icon='🎉');st.rerun()
+            #else:st.warning(f'{t-counts(n)[0]} indicator(s) still require a valid assessment.')
 def header():
     s=st.session_state;c1,c2,c3=st.columns([5,3,.6],vertical_alignment='center');c1.markdown("<div class='brand'>🌿 Sustainability Maturity Tool<br><span>Measure • Improve • Build a Greener DevOps</span></div>",unsafe_allow_html=True);c2.selectbox('Project',s.projects,key='project',on_change=lambda:None);c3.markdown(f"<div class='avatar'>{s.user}</div>",unsafe_allow_html=True);st.divider()
 def sidebar():
@@ -487,21 +498,21 @@ def dashboard():
 
     st.divider()
 
-    for col, (n, lv) in zip(
-        st.columns(len(LEVELS)),
-        LEVELS.items(),
-    ):
-        with col.container(border=True):
-            st.markdown(f"**Level {n}**")
-            st.caption(lv['name'])
+    #for col, (n, lv) in zip(
+        #st.columns(len(LEVELS)),
+        #LEVELS.items(),
+    #):
+        #with col.container(border=True):
+            #st.markdown(f"**Level {n}**")
+            #st.caption(lv['name'])
 
-            st.button(
-                "Open",
-                key=f"open-{n}",
-                use_container_width=True,
-                on_click=go,
-                args=(f"level-{n}",),
-            )
+            #st.button(
+                #"Open",
+                #key=f"open-{n}",
+                #use_container_width=True,
+                #on_click=go,
+                #args=(f"level-{n}",),
+            #)
 
 
 def requirement_type_chart(n):
