@@ -23,7 +23,7 @@ L1=[
 ('L1-09','Awareness of existing tool capabilities and limitations','The team shares knowledge about build, testing and related tools, including their capabilities and limitations for sustainability.',['notes'],'boolean',None,'optional'),
 ]
 L2=[
-('L2-01','Sustainability skill acquired','Team member have done prior course or completed ones before design starts',['upload'],'binary',None,'required'),
+('L2-01','Sustainability skill acquired','Team member have done prior course or completed ones before design starts',['upload'],'boolean',None,'required'),
 ('L2-02','Collaboration and knowledge-sharing practices','Team lead conducts exercises to build collective knowledge such as- given a set of competing features and observe what they prioritise.',['notes'],'qualitative_numeric','Number of sessions done','required'),
 ('L2-03','Awareness of accessibility and inclusivity','Team members use documented diverse personas/stakeholder groups and discussion of their needs (role-based sustainability concerns)',['notes','upload'],'numeric','Number of role based sustainability goals identified', 'desirable'),
 ('L2-04','Sustainability as a parameter during backlog prioritization','Sustainability considerations are explicitly discussed and documented when prioritizing competing features or user stories. Relevant environmental, technical, and social impacts are considered alongside business and technical priorities.',['notes'], 'numeric','Number of items or features resolved for sustainability impact','desirable'),
