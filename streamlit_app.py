@@ -211,11 +211,11 @@ def requirement_type_chart(n):
         "The denominator is the total number of indicators of that type."
     )
 
+    # Use only arguments supported across current Streamlit versions.
+    # The percentages are inherently bounded between 0 and 100.
     st.bar_chart(
         chart_df,
         y='Achieved (%)',
-        y_min=0,
-        y_max=100,
         use_container_width=True,
     )
 
