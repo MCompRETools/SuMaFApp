@@ -24,7 +24,7 @@ PAGE_SIZE = 5
 STATUSES = ["Not started", "In progress", "Completed"]
 STATUS_DOT = {"Not started": "⚪", "In progress": "🟡", "Completed": "🟢"}
 COLS = [0.7, 1.6, 2.6, 1.4, 1.7, 1.5, 0.5]
-HEADERS = ["ID", "Activity / Practice", "Description", "Date", "Evidence", "Status", ""]
+HEADERS = ["ID", "Indicators", "What is Expected?", "Date", "Evidence", "Status", ""]
 
 LEVELS = {
     1: {
@@ -34,7 +34,7 @@ LEVELS = {
         "tip": "Record the activities, discussions and documents that show early consideration "
                "of sustainability in your DevOps project.",
         "defaults": [
-            ("Stakeholder Awareness of Sustainability in Software design", "At project initiation, stakeholders communicate sustainability objectives with the client and team members. Such as ESG compliance at EU. They openly discuss what is possible and what not in order to comply with guidelines or standards."),
+            ("Stakeholder Awareness of Sustainability Inclusion", "At project initiation, stakeholders communicate sustainability objectives with the client and team members. Such as ESG compliance at EU. They openly discuss what is \\ possible and what not in order to comply with guidelines or standards."),
             ("Identify relevant sustainability dimensions", "Considered environmental, social and economic aspects for the project scope."),
             ("Capture initial sustainability goals", "Documented preliminary goals (e.g. reduce energy use, promote inclusive design)."),
             ("Assign responsibility", "Identified team member to champion sustainability discussions."),
@@ -53,7 +53,7 @@ LEVELS = {
         ],
     },
     3: {
-        "name": "Sustainability Measurement",
+        "name": "Measurement",
         "desc": "The pipeline systematically tracks qualitative and quantitative metrics across build, test and infrastructure phases.",
         "tip": "Record which metrics you collect, where they are stored and how often they are reviewed.",
         "defaults": [
@@ -64,7 +64,7 @@ LEVELS = {
         ],
     },
     4: {
-        "name": "Sustainability Optimization",
+        "name": "Optimization",
         "desc": "Metric analytics are used to actively optimize resource usage and pipeline efficiency.",
         "tip": "Record the optimizations you made and the measured effect they had.",
         "defaults": [
@@ -116,7 +116,7 @@ def new_project_data():
     return {
         str(n): {
             "activities": [
-                {"id": f"L{n}-{i:02d}", "title": t, "hint": h, "description": "",
+                {"id": f"L{n}-{i:02d}", "title": t, "description": h,
                  "date": None, "status": "Not started", "evidence": []}
                 for i, (t, h) in enumerate(lv["defaults"], 1)
             ],
@@ -200,11 +200,20 @@ def set_pg(key, value):
 
 
 def add_activity(n):
+    ss = st.session_state
+    title = ss.get(f"new-title-{n}", "").strip()
+    if not title:
+        ss[f"add-error-{n}"] = True
+        return
     acts = level(n)["activities"]
     nxt = max([int(a["id"].split("-")[1]) for a in acts] or [0]) + 1
-    acts.append({"id": f"L{n}-{nxt:02d}", "title": "New activity", "hint": "Describe what the team did.",
-                 "description": "", "date": None, "status": "Not started", "evidence": []})
-    st.session_state[f"pg-{n}"] = (len(acts) - 1) // PAGE_SIZE
+    acts.append({"id": f"L{n}-{nxt:02d}", "title": title,
+                 "description": ss.get(f"new-desc-{n}", "").strip(),
+                 "date": None, "status": "Not started", "evidence": []})
+    ss[f"pg-{n}"] = (len(acts) - 1) // PAGE_SIZE
+    ss[f"new-title-{n}"] = ""
+    ss[f"new-desc-{n}"] = ""
+    ss[f"add-error-{n}"] = False
 
 
 def delete_activity(n, act_id):
@@ -247,9 +256,8 @@ def activity_row(n, a):
     k = f"{slug(st.session_state.project)}-{a['id']}"
     c = st.columns(COLS, vertical_alignment="center")
     c[0].markdown(f"**{a['id']}**")
-    a["title"] = c[1].text_input("Activity", a["title"], key=f"{k}-title", label_visibility="collapsed")
-    a["description"] = c[2].text_area("Description", a["description"], placeholder=f"E.g. {a['hint']}",
-                                      height=80, key=f"{k}-desc", label_visibility="collapsed")
+    c[1].markdown(a["title"])
+    c[2].caption(a.get("description") or a.get("hint", ""))
     picked = c[3].date_input("Date", value=date.fromisoformat(a["date"]) if a["date"] else None,
                              format="YYYY-MM-DD", key=f"{k}-date", label_visibility="collapsed")
     a["date"] = picked.isoformat() if picked else None
@@ -276,7 +284,13 @@ def activities_tab(n):
     left, right = st.columns([5, 1], vertical_alignment="center")
     left.subheader(f"Level {n} Activities")
     left.caption(f"Record the activities your team is performing related to Level {n}.")
-    right.button("＋ Add Activity", type="primary", use_container_width=True, on_click=add_activity, args=(n,))
+    with right.popover("＋ Add Activity", use_container_width=True):
+        st.text_input("Activity", key=f"new-title-{n}", placeholder="e.g. Sustainability kick-off")
+        st.text_area("Description", key=f"new-desc-{n}", height=80,
+                     placeholder="What the team is expected to do or show")
+        if st.session_state.get(f"add-error-{n}"):
+            st.error("Enter an activity name first.")
+        st.button("Add", key=f"add-{n}", type="primary", on_click=add_activity, args=(n,))
 
     for col, h in zip(st.columns(COLS), HEADERS):
         col.markdown(f"<div class='hdr'>{h}</div>", unsafe_allow_html=True)
@@ -411,7 +425,7 @@ def assessment_page():
 def reports_page():
     st.subheader("Reports")
     rows = [{"level": n, "level_name": LEVELS[n]["name"], "level_complete": level(n)["complete"],
-             "id": a["id"], "activity": a["title"], "description": a["description"], "date": a["date"],
+             "id": a["id"], "activity": a["title"], "description": a.get("description") or a.get("hint", ""), "date": a["date"],
              "status": a["status"], "evidence_files": "; ".join(a["evidence"])}
             for n in LEVELS for a in level(n)["activities"]]
     df = pd.DataFrame(rows)
