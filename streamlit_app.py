@@ -123,8 +123,8 @@ CSS='''<style>
 
 
 # ---------- multi-respondent storage ----------
-# Each browser session gets its own response_id. The response_id is also placed
-# in the URL so a browser refresh does not create a new response.
+# Each browser session gets its own response_id. The ID is kept in
+# Streamlit session state so independently opened browsers remain isolated.
 DATA_DIR = Path("data")
 RESPONSES_DIR = DATA_DIR / "responses"
 PROJECTS_FILE = DATA_DIR / "projects.json"
@@ -246,18 +246,17 @@ def init():
 
     s = st.session_state
 
-    # Recover the response ID from the URL after a browser refresh.
-    url_response_id = st.query_params.get("response_id")
-
-    if not url_response_id:
-        url_response_id = new_response_id()
-        st.query_params["response_id"] = url_response_id
-
-    s.setdefault('response_id', url_response_id)
-
-    # If the URL changes, switch to that response.
-    if s.response_id != url_response_id:
-        s.response_id = url_response_id
+    # IMPORTANT:
+    # Do NOT automatically put a generated response_id into the URL.
+    # If the first browser's URL is copied to another browser, both browsers
+    # would otherwise intentionally use the same response_id.
+    #
+    # A fresh Streamlit browser session gets a fresh UUID in session_state.
+    # This guarantees that two independently opened browsers have different
+    # response IDs.
+    if 'response_id' not in s:
+        s.response_id = new_response_id()
+        s.created_at = pd.Timestamp.utcnow().isoformat()
 
     s.setdefault('created_at', pd.Timestamp.utcnow().isoformat())
     s.setdefault('respondent_code', '')
@@ -835,11 +834,14 @@ def settings():
     s = st.session_state
     st.subheader('Respondent / Survey Session')
 
-    s.respondent_code = st.text_input(
+    entered_code = st.text_input(
         'Participant code',
         s.respondent_code,
-        help='Use the anonymous participant code provided for the survey.'
-    )
+        help='Enter the unique anonymous participant code assigned to you.'
+    ).strip().upper()
+
+    if entered_code != s.respondent_code:
+        s.respondent_code = entered_code
 
     s.user = st.text_input(
         'Your initials (optional)',
@@ -849,6 +851,11 @@ def settings():
 
     st.caption(f"Response ID: `{s.response_id}`")
     st.caption('This response is isolated from other respondents.')
+
+    st.info(
+        'Each browser session has a different Response ID. '
+        'Do not copy a URL containing a response_id from one participant to another.'
+    )
 
     if st.button('Save respondent details'):
         save_response()
@@ -876,8 +883,8 @@ if st.session_state.respondent_code:
     )
 else:
     st.info(
-        "Please open Settings and enter your anonymous participant code "
-        "before starting the assessment."
+        "Please open Settings and enter your unique anonymous participant code "
+        "before starting the assessment. Each browser session is isolated."
     )
 sidebar()
 p=st.session_state.page
