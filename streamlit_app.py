@@ -878,7 +878,7 @@ st.markdown(CSS, unsafe_allow_html=True)
 header()
 if st.session_state.respondent_code:
     st.caption(
-        f"Independent survey response: **{st.session_state.respondent_code}**"
+        #f"Independent survey response: **{st.session_state.respondent_code}**"
         f" · Response ID: `{st.session_state.response_id}`"
     )
 else:
