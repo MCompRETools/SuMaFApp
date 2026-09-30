@@ -9,7 +9,7 @@ st.set_page_config(page_title='Sustainability Maturity Tool', page_icon='🌿', 
 
 st.session_state.setdefault('page', 'dashboard')
 DATA_DIR=Path('data'); PROJECTS_FILE=DATA_DIR/'projects.json'; PAGE_SIZE=5
-QUAL=['Active','Suggested','Not evident']; BOOL=['True','False']
+QUAL=['Actively in Place','In place but without visible evidence']; BOOL=['True','False']
 
 L1=[
 ('L1-01','Stakeholder awareness of sustainability goals','At project initiation, stakeholders communicate sustainability objectives with the client and team members, including relevant guidelines or standards, and discuss what is and is not feasible.',['notes','upload'],'qualitative',None,'desirable'),
