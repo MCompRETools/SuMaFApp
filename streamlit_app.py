@@ -1062,18 +1062,6 @@ def dashboard():
             st.markdown(f"**Level {n} – {lv['name']}**")
             dashboard_progress_bar(n)
 
-            # Start button for Level 1.
-            if n == 1:
-                if st.button(
-                    "Start Level 1",
-                    type="primary",
-                    use_container_width=True,
-                    key="start-level-1-dashboard"
-                ):
-                    st.session_state.level_indicator_index[1] = 0
-                    go("level-1")
-                    st.rerun()
-
 
 def requirement_type_chart(n):
     """Render the requirement-type percentage chart for a maturity level."""
