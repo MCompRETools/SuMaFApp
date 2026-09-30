@@ -1127,44 +1127,12 @@ def assessment():
     )
 
     st.divider()
-    st.subheader("Suggestions — Attempt to achieve indicators")
+    st.subheader("Suggestions — Attempt to achieve indicators--")
 
     suggestions_found = False
 
-    for n, x in LEVELS.items():
-        active = inds(n)
-        if not active:
-            continue
-
-        ds = defs(n)
-        unsatisfied = [
-            i for i in active
-            if not satisfied(i, ds[i['id']])
-        ]
-
-        if not unsatisfied:
-            continue
-
-        suggestions_found = True
-
-        with st.container(border=True):
-            st.markdown(f"**Level {n} – {x['name']}**")
-
-            for i in unsatisfied:
-                unlocked, unresolved = precondition_status(i['id'])
-
-                if not unlocked:
-                    st.markdown(
-                        f"🔒 **{i['id']} – {i['title']}**  "
-                        f"*(prerequisite: {', '.join(unresolved)})*"
-                    )
-                else:
-                    st.markdown(
-                        f"• **{i['id']} – {i['title']}**"
-                    )
-
     if not suggestions_found:
-        st.success("All currently available indicators have been satisfied.")
+        st.success("Collaborate and share your insights with team..... (Build In Progress!!!)")
 
 def reports():
     st.subheader('Reports');rows=[]
