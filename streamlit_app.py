@@ -291,6 +291,8 @@ def init():
     s.setdefault('project', s.projects[0])
     s.setdefault('page', 'dashboard')
     s.setdefault('user', '')
+    s.setdefault('level_indicator_index', {n: 0 for n in LEVELS})
+    s.setdefault('next_level_message', None)
 
     if s.get('loaded_response_id') != s.response_id:
         saved = load_response(s.response_id)
@@ -560,25 +562,30 @@ def indicator_card(n, i, d):
 
 
 def indicators_tab(n):
-    """Compatibility wrapper: render only the current indicator."""
     a = inds(n)
+    ds = defs(n)
+
     if not a:
         st.info(f'Level {n} yet to be built!!!!')
         return
 
-    idx = st.session_state.get(f'indicator-{n}', 0)
+    if n == 1:
+        st.subheader('Level 1 Indicators')
+        st.caption('This is best to do at project initiation. But not restricted to it')
+    elif n == 2:
+        st.subheader('Level 2 Indicators')
+        st.caption('This is best to do at feature planning stage. The indicators assess how sustainable your organization\'s approach is.')
+
+    idx = st.session_state.level_indicator_index.get(n, 0)
     idx = max(0, min(idx, len(a) - 1))
-    indicator_card(n, a[idx], defs(n)[a[idx]['id']])
+    st.session_state.level_indicator_index[n] = idx
 
+    st.markdown(
+        f"### Indicator {idx + 1} of {len(a)}"
+    )
 
-def indicators_tab(n):
-    a=inds(n); ds=defs(n)
-    if not a: st.info(f'Level {n} yet to be built!!!!');return
-    if n==1: st.subheader(f'Level {n} Indicators');st.caption('This is best to do at project initiation. But not restricted to it')
-    if n==2: st.subheader(f'Level {n} Indicators');st.caption('This is best to do at feature planning stage. The indicators assess how sustaianble is your organizations approach')        
-    pages=max(1,ceil(len(a)/PAGE_SIZE));pk=f'pg-{n}';pg=min(st.session_state.get(pk,0),pages-1)
-    for i in a[pg*PAGE_SIZE:(pg+1)*PAGE_SIZE]:indicator_card(n,i,ds[i['id']])
-    lo=pg*PAGE_SIZE+1;hi=min((pg+1)*PAGE_SIZE,len(a));_,info,prev,nxt=st.columns([6,1.2,.5,.5]);info.caption(f'{lo}-{hi} of {len(a)}');prev.button('‹',disabled=pg==0,key=f'p-{n}',on_click=lambda:st.session_state.__setitem__(pk,pg-1));nxt.button('›',disabled=pg>=pages-1,key=f'n-{n}',on_click=lambda:st.session_state.__setitem__(pk,pg+1))
+    indicator_card(n, a[idx], ds[a[idx]['id']])
+
 def evidence_tab(n):
     rows=[i for i in inds(n) if i.get('notes') or i.get('evidence') or i.get('numeric_value') is not None]
     if not rows:st.info('No indicator evidence or measurements recorded yet.');return
@@ -610,85 +617,120 @@ def progress_tab(n):
     st.dataframe(pd.DataFrame(rows),hide_index=True,use_container_width=True)
 def level_page(n):
     x = LEVELS[n]
-    a = inds(n)
 
-    if not a:
+    # Levels 3–5 are intentionally locked.
+    if n in (3, 4, 5):
         st.markdown(
-            f"<div class='banner'><div class='badge'>{n}</div>"
+            f"<div class='banner'><div class='badge'>🔒</div>"
             f"<div style='flex:1'><h2>Level {n} – {x['name']}</h2>"
-            f"<p>{x['desc']}</p></div></div>",
+            f"<p>This level is currently under development.</p></div></div>",
             unsafe_allow_html=True
         )
-        st.info(f'Level {n} indicators are not configured yet.')
+        st.info(f"Level {n} is currently locked while the next maturity-level content is being developed.")
+        if st.button("← Back to Dashboard", use_container_width=True):
+            go("dashboard")
+            st.rerun()
         return
-
-    # One indicator per page.
-    pk = f'indicator-{n}'
-    idx = max(0, min(st.session_state.get(pk, 0), len(a) - 1))
-    st.session_state[pk] = idx
 
     st.markdown(
         f"<div class='banner'><div class='badge'>{n}</div>"
         f"<div style='flex:1'><h2>Level {n} – {x['name']}</h2>"
-        f"<p>{x['desc']}</p></div></div>",
+        f"<p>{x['desc']}</p></div>"
+        f"<div class='tip'><b>💡 Evidence recording</b><br>"
+        f"Each indicator has its own evidence and assessment fields.<br><br>"
+        f"🔒 Indicators with unmet prerequisites remain locked.</div></div>",
         unsafe_allow_html=True
     )
 
-    if n == 1:
-        st.caption('This is best to do at project initiation. But not restricted to it.')
-    elif n == 2:
-        st.caption('This is best to do at feature planning stage. The indicators assess how sustainable your organization’s approach is.')
+    if lv(n)['complete']:
+        st.success(f'Level {n} is marked complete.')
 
-    st.markdown(
-        f"### Indicator {idx + 1} of {len(a)}"
+    # Only retain the indicator/evidence/notes/progress tabs.
+    a, b, c, d = st.tabs(
+        ['Indicators', 'Evidence Summary', 'Level Notes', 'Progress']
     )
 
-    # Render exactly one indicator.
-    indicator_card(n, a[idx], defs(n)[a[idx]['id']])
+    with a:
+        indicators_tab(n)
+    with b:
+        evidence_tab(n)
+    with c:
+        lv(n).__setitem__(
+            'notes',
+            st.text_area(
+                'Level notes',
+                lv(n).get('notes', ''),
+                height=180,
+                key=f'ln-{n}'
+            )
+        )
+    with d:
+        progress_tab(n)
 
     st.divider()
 
-    # Navigation / save actions.
-    prev_col, exit_col, next_col = st.columns([1.2, 1.8, 1.8])
+    idx = st.session_state.level_indicator_index.get(n, 0)
+    total = len(inds(n))
+    is_last = total > 0 and idx >= total - 1
 
-    with prev_col:
+    back, _, save_next, save_exit = st.columns([1.2, 3, 2.2, 1.8])
+
+    with back:
         if st.button(
-            '← Previous',
-            disabled=idx == 0,
+            '← Back to Dashboard',
             use_container_width=True,
-            key=f'prev-indicator-{n}'
+            key=f'level-back-{n}'
         ):
             save_response()
-            st.session_state[pk] = idx - 1
+            go('dashboard')
             st.rerun()
 
-    with exit_col:
+    with save_next:
+        if is_last:
+            button_label = (
+                'Save and go to next level'
+                if n == 1
+                else 'Save and go to next level'
+            )
+        else:
+            button_label = 'Save and go to next'
+
+        if st.button(
+            button_label,
+            type='primary',
+            use_container_width=True,
+            key=f'level-save-next-{n}'
+        ):
+            save_response()
+
+            if is_last:
+                if n == 1:
+                    st.session_state.level_indicator_index[2] = 0
+                    go('level-2')
+                    st.rerun()
+                elif n == 2:
+                    st.session_state.next_level_message = (
+                        'The next level is currently being built. '
+                        'Your Level 2 assessment has been saved.'
+                    )
+                    go('dashboard')
+                    st.rerun()
+            else:
+                st.session_state.level_indicator_index[n] = min(
+                    idx + 1,
+                    total - 1
+                )
+                st.rerun()
+
+    with save_exit:
         if st.button(
             'Save and exit',
             use_container_width=True,
-            key=f'exit-indicator-{n}'
+            key=f'level-save-exit-{n}'
         ):
             save_response()
-            st.session_state.page = 'dashboard'
+            go('dashboard')
             st.rerun()
-
-    with next_col:
-        next_label = 'Save and go to next'
-        if st.button(
-            next_label,
-            type='primary',
-            use_container_width=True,
-            key=f'next-indicator-{n}'
-        ):
-            save_response()
-
-            if idx < len(a) - 1:
-                st.session_state[pk] = idx + 1
-                st.rerun()
-            else:
-                # At the final indicator, return to the dashboard.
-                st.session_state.page = 'dashboard'
-                st.rerun()
 
 def header():
     s = st.session_state
@@ -706,10 +748,46 @@ def header():
     )
     st.divider()
 def sidebar():
-    p=st.session_state.page;nav=[('dashboard','🏠 Dashboard'),('assessment','📊 Maturity Assessment')]+[(f'level-{n}',f'{n} · Level {n} – {x["name"]}') for n,x in LEVELS.items()]+[('reports','📄 Reports'),('settings','⚙️ Settings')]
+    p = st.session_state.page
+    nav = [
+        ('dashboard', '🏠 Dashboard'),
+        ('assessment', '📊 Maturity Assessment')
+    ]
+
+    for n, x in LEVELS.items():
+        if n in (3, 4, 5):
+            nav.append((f'level-{n}', f'🔒 {n} · Level {n} – {x["name"]}'))
+        else:
+            nav.append((f'level-{n}', f'{n} · Level {n} – {x["name"]}'))
+
+    nav += [
+        ('reports', '📄 Reports'),
+        ('settings', '⚙️ Settings')
+    ]
+
     with st.sidebar:
-        for k,label in nav:st.button(label,key='nav-'+k,use_container_width=True,on_click=lambda k=k:st.session_state.__setitem__('page',k),type='primary' if p==k else 'secondary')
-        st.divider();st.caption('🌿 Smaller footprints. Stronger software.')
+        for k, label in nav:
+            if k in ('level-3', 'level-4', 'level-5'):
+                st.button(
+                    label,
+                    key='nav-' + k,
+                    use_container_width=True,
+                    disabled=True,
+                    help='This level is currently under development.'
+                )
+            else:
+                st.button(
+                    label,
+                    key='nav-' + k,
+                    use_container_width=True,
+                    on_click=lambda k=k: st.session_state.__setitem__('page', k),
+                    type='primary' if p == k else 'secondary'
+                )
+
+        st.divider()
+        st.caption('🌿 Smaller footprints. Stronger software.')
+
+
 def go(page):
     """Set the current Streamlit page."""
     st.session_state.page = page
@@ -911,6 +989,11 @@ def dashboard_progress_bar(n):
 def dashboard():
     st.subheader('Dashboard')
 
+    if st.session_state.get('next_level_message'):
+        st.success(st.session_state.next_level_message)
+        st.session_state.next_level_message = None
+
+
     reached = achieved()
 
     all_done = sum(
@@ -927,9 +1010,7 @@ def dashboard():
 
     m1.metric(
         "Current maturity level",
-        f"Level {reached}"
-        if reached
-        else "Level Progress",
+        f"Level {reached}" if reached else "Level Progress",
     )
 
     m2.metric(
@@ -937,16 +1018,36 @@ def dashboard():
         f"{all_done} / {all_total}",
     )
 
+    # Last activity / last update date
+    last_update = None
+    for n in LEVELS:
+        for i in inds(n):
+            if i.get('date'):
+                try:
+                    d = date.fromisoformat(i['date'])
+                    if last_update is None or d > last_update:
+                        last_update = d
+                except Exception:
+                    pass
+
     m3.metric(
-        "Next level",
-        (
-            f"Level {reached + 1}"
-            if reached < len(LEVELS)
-            else "All levels done"
-        ),
+        "Last update",
+        last_update.strftime("%Y-%m-%d") if last_update else "Not yet updated",
     )
 
     st.divider()
+
+    # Start the assessment from Level 1.
+    if st.button(
+        "▶ Start Assessment",
+        type="primary",
+        use_container_width=True,
+        key="dashboard-start-assessment"
+    ):
+        st.session_state.level_indicator_index[1] = 0
+        go("level-1")
+        st.rerun()
+
     st.subheader("Level progress conditions")
     st.caption(
         "Each level progresses through three conditions: Sufficient, "
@@ -958,29 +1059,20 @@ def dashboard():
             continue
 
         with st.container(border=True):
-            st.markdown(
-                f"**Level {n} – {lv['name']}**"
-            )
+            st.markdown(f"**Level {n} – {lv['name']}**")
             dashboard_progress_bar(n)
 
-
-    st.divider()
-
-    #for col, (n, lv) in zip(
-        #st.columns(len(LEVELS)),
-        #LEVELS.items(),
-    #):
-        #with col.container(border=True):
-            #st.markdown(f"**Level {n}**")
-            #st.caption(lv['name'])
-
-            #st.button(
-                #"Open",
-                #key=f"open-{n}",
-                #use_container_width=True,
-                #on_click=go,
-                #args=(f"level-{n}",),
-            #)
+            # Start button for Level 1.
+            if n == 1:
+                if st.button(
+                    "Start Level 1",
+                    type="primary",
+                    use_container_width=True,
+                    key="start-level-1-dashboard"
+                ):
+                    st.session_state.level_indicator_index[1] = 0
+                    go("level-1")
+                    st.rerun()
 
 
 def requirement_type_chart(n):
@@ -1009,14 +1101,82 @@ def requirement_type_chart(n):
 
 def assessment():
     st.subheader('Maturity assessment')
-    rows=[]
-    for n,x in LEVELS.items():
-        d,t=counts(n); rows.append({'Level':n,'Name':x['name'],'Satisfied':f'{d}/{t}','Progress %':round(100*d/t) if t else 0,'Status':status(n)})
-    st.dataframe(pd.DataFrame(rows),hide_index=True,use_container_width=True)
-    active_levels=[n for n in LEVELS if inds(n)]
-    if active_levels:
-        st.divider(); st.subheader('Satisfied indicators by requirement type')
-        for n in active_levels: requirement_type_chart(n)
+
+    # Last update across all recorded indicator activity.
+    last_update = None
+    for n in LEVELS:
+        for i in inds(n):
+            if i.get('date'):
+                try:
+                    d = date.fromisoformat(i['date'])
+                    if last_update is None or d > last_update:
+                        last_update = d
+                except Exception:
+                    pass
+
+    if last_update:
+        st.info(
+            f"Last activity: **{last_update.strftime('%Y-%m-%d')}**"
+        )
+    else:
+        st.info("Last activity: **No activity recorded yet**")
+
+    rows = []
+    for n, x in LEVELS.items():
+        d, t = counts(n)
+        rows.append({
+            'Level': n,
+            'Name': x['name'],
+            'Satisfied': f'{d}/{t}',
+            'Progress %': round(100 * d / t) if t else 0,
+            'Status': status(n)
+        })
+
+    st.dataframe(
+        pd.DataFrame(rows),
+        hide_index=True,
+        use_container_width=True
+    )
+
+    st.divider()
+    st.subheader("Suggestions — Attempt to achieve indicators")
+
+    suggestions_found = False
+
+    for n, x in LEVELS.items():
+        active = inds(n)
+        if not active:
+            continue
+
+        ds = defs(n)
+        unsatisfied = [
+            i for i in active
+            if not satisfied(i, ds[i['id']])
+        ]
+
+        if not unsatisfied:
+            continue
+
+        suggestions_found = True
+
+        with st.container(border=True):
+            st.markdown(f"**Level {n} – {x['name']}**")
+
+            for i in unsatisfied:
+                unlocked, unresolved = precondition_status(i['id'])
+
+                if not unlocked:
+                    st.markdown(
+                        f"🔒 **{i['id']} – {i['title']}**  "
+                        f"*(prerequisite: {', '.join(unresolved)})*"
+                    )
+                else:
+                    st.markdown(
+                        f"• **{i['id']} – {i['title']}**"
+                    )
+
+    if not suggestions_found:
+        st.success("All currently available indicators have been satisfied.")
 
 def reports():
     st.subheader('Reports');rows=[]
