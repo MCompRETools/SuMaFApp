@@ -140,13 +140,21 @@ def response_file(response_id):
 
 def template(d):
     return {
-        'id': d[0], 'title': d[1], 'description': d[2],
-        'evidence': [], 'notes': '', 'date': None,
-        # First gate shown to the respondent. Details are displayed only after Yes.
-        'assessment_choice': None,
-        'status': ('Not evident' if d[4]=='qualitative'
-                   else 'False' if d[4]=='boolean' else None),
-        'numeric_value': None, 'requirement_type': d[6]
+        'id': d[0],
+        'title': d[1],
+        'description': d[2],
+        'evidence': [],
+        'notes': '',
+        'date': date.today().isoformat(),
+        'status': (
+            'Not evident'
+            if d[4] == 'qualitative'
+            else 'False'
+            if d[4] == 'boolean'
+            else None
+        ),
+        'numeric_value': None,
+        'requirement_type': d[6]
     }
 
 def new_data():
