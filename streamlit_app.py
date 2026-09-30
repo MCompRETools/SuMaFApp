@@ -1,4 +1,4 @@
-import json, re
+import json, re, uuid
 from pathlib import Path
 from datetime import date
 from math import ceil
@@ -121,32 +121,66 @@ CSS='''<style>
 
 </style>'''
 
-def slug(x): return re.sub(r'[^a-z0-9]+','-',x.lower()).strip('-') or 'project'
+
+# ---------- multi-respondent storage ----------
+# Each browser session gets its own response_id. The response_id is also placed
+# in the URL so a browser refresh does not create a new response.
+DATA_DIR = Path("data")
+RESPONSES_DIR = DATA_DIR / "responses"
+PROJECTS_FILE = DATA_DIR / "projects.json"
+
+def slug(x):
+    return re.sub(r'[^a-z0-9]+','-',x.lower()).strip('-') or 'project'
+
+def new_response_id():
+    return uuid.uuid4().hex
+
+def response_file(response_id):
+    return RESPONSES_DIR / f"{response_id}.json"
+
 def template(d):
     return {
         'id': d[0], 'title': d[1], 'description': d[2],
         'evidence': [], 'notes': '', 'date': None,
-        'status': ('Not evident' if d[4]=='qualitative' else 'False' if d[4]=='boolean' else None),
+        'status': ('Not evident' if d[4]=='qualitative'
+                   else 'False' if d[4]=='boolean' else None),
         'numeric_value': None, 'requirement_type': d[6]
     }
 
-def new_data(): return {str(n):{'indicators':[template(d) for d in lv['indicators']],'notes':'','complete':False} for n,lv in LEVELS.items()}
+def new_data():
+    return {
+        str(n): {
+            'indicators': [template(d) for d in lv['indicators']],
+            'notes': '',
+            'complete': False
+        }
+        for n, lv in LEVELS.items()
+    }
+
 def load_projects():
-    try:return json.loads(PROJECTS_FILE.read_text()) if PROJECTS_FILE.exists() else ['Example DevOps Project']
-    except:return ['Example DevOps Project']
-def save_projects(): PROJECTS_FILE.write_text(json.dumps(st.session_state.projects,indent=2))
-def load_project(name):
-    p=DATA_DIR/f'{slug(name)}.json'
+    # Projects are now model labels, not the storage key.
+    # Keeping this list preserves the existing UI.
+    try:
+        return json.loads(PROJECTS_FILE.read_text()) if PROJECTS_FILE.exists() else ['Example DevOps Project']
+    except Exception:
+        return ['Example DevOps Project']
+
+def save_projects():
+    PROJECTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    PROJECTS_FILE.write_text(json.dumps(st.session_state.projects, indent=2))
+
+def load_response(response_id):
+    p = response_file(response_id)
+
     if not p.exists():
         return new_data()
 
     try:
         existing = json.loads(p.read_text())
-    except:
+    except Exception:
         return new_data()
 
-    # Migrate saved project data when new indicators are added to the
-    # maturity model. Existing evidence/status/notes are preserved.
+    # Migrate the saved response against the current maturity model.
     data = new_data()
 
     for n in LEVELS:
@@ -160,33 +194,94 @@ def load_project(name):
 
         for indicator in data[key]['indicators']:
             iid = indicator['id']
+
             if iid in old_indicators:
                 saved = old_indicators[iid]
 
-                # Preserve user-entered project data.
                 indicator['evidence'] = saved.get('evidence', [])
                 indicator['notes'] = saved.get('notes', '')
                 indicator['date'] = saved.get('date')
                 indicator['status'] = saved.get('status')
                 indicator['numeric_value'] = saved.get('numeric_value')
 
-                # Keep the current model's requirement classification.
-                indicator['requirement_type'] = LEVELS[n]['indicators'][
-                    next(
-                        idx for idx, d in enumerate(LEVELS[n]['indicators'])
-                        if d[0] == iid
-                    )
-                ][6]
+                # Keep the current maturity-model classification.
+                current = next(
+                    d for d in LEVELS[n]['indicators']
+                    if d[0] == iid
+                )
+                indicator['requirement_type'] = current[6]
 
         data[key]['notes'] = old_level.get('notes', '')
         data[key]['complete'] = old_level.get('complete', False)
 
     return data
-def save_project(): (DATA_DIR/f'{slug(st.session_state.project)}.json').write_text(json.dumps(st.session_state.data,indent=2))
+
+def save_response():
+    """
+    Save only the current respondent's response.
+    The response_id is unique per respondent/browser.
+    """
+    RESPONSES_DIR.mkdir(parents=True, exist_ok=True)
+
+    payload = {
+        'response_id': st.session_state.response_id,
+        'respondent_code': st.session_state.respondent_code,
+        'project': st.session_state.project,
+        'user': st.session_state.user,
+        'created_at': st.session_state.created_at,
+        'updated_at': pd.Timestamp.utcnow().isoformat(),
+        'data': st.session_state.data,
+    }
+
+    response_file(st.session_state.response_id).write_text(
+        json.dumps(payload, indent=2)
+    )
+
+# Backwards-compatible name used by the existing UI.
+save_project = save_response
+
 def init():
-    DATA_DIR.mkdir(exist_ok=True); s=st.session_state
-    s.setdefault('projects',load_projects()); s.setdefault('project',s.projects[0]); s.setdefault('page','dashboard'); s.setdefault('user','JD')
-    if s.get('loaded_project')!=s.project:s.data=load_project(s.project);s.loaded_project=s.project
+    DATA_DIR.mkdir(exist_ok=True)
+    RESPONSES_DIR.mkdir(exist_ok=True)
+
+    s = st.session_state
+
+    # Recover the response ID from the URL after a browser refresh.
+    url_response_id = st.query_params.get("response_id")
+
+    if not url_response_id:
+        url_response_id = new_response_id()
+        st.query_params["response_id"] = url_response_id
+
+    s.setdefault('response_id', url_response_id)
+
+    # If the URL changes, switch to that response.
+    if s.response_id != url_response_id:
+        s.response_id = url_response_id
+
+    s.setdefault('created_at', pd.Timestamp.utcnow().isoformat())
+    s.setdefault('respondent_code', '')
+    s.setdefault('projects', load_projects())
+    s.setdefault('project', s.projects[0])
+    s.setdefault('page', 'dashboard')
+    s.setdefault('user', '')
+
+    if s.get('loaded_response_id') != s.response_id:
+        saved = load_response(s.response_id)
+
+        # Support both the new wrapped response format and the older
+        # project-data-only format.
+        if isinstance(saved, dict) and 'data' in saved:
+            s.data = saved['data']
+            s.respondent_code = saved.get('respondent_code', '')
+            s.project = saved.get('project', s.projects[0])
+            s.user = saved.get('user', '')
+            s.created_at = saved.get('created_at', s.created_at)
+        else:
+            s.data = saved
+
+        s.loaded_response_id = s.response_id
+
 def lv(n):return st.session_state.data[str(n)]
 def defs(n):return {d[0]:d for d in LEVELS[n]['indicators']}
 def inds(n):return lv(n).get('indicators',[])
@@ -213,7 +308,10 @@ def achieved():
         else:break
     return r
 def evidence_path(iid,fn):
-    p=DATA_DIR/'evidence'/slug(st.session_state.project)/iid;p.mkdir(parents=True,exist_ok=True);return p/Path(fn).name
+    # Evidence belongs to the respondent response, not to the shared project.
+    p = RESPONSES_DIR / st.session_state.response_id / 'evidence' / iid
+    p.mkdir(parents=True, exist_ok=True)
+    return p / Path(fn).name
 
 def save_uploads(i,files):
     for f in files or []:
@@ -274,7 +372,7 @@ def render_locked_indicator(
 
 
 def indicator_card(n,i,d):
-    iid=i['id']; key=f'{slug(st.session_state.project)}-{iid}'; typ=d[4]; requirement=d[6].title()
+    iid=i['id']; key=f'{st.session_state.response_id}-{iid}'; typ=d[4]; requirement=d[6].title()
 
     unlocked, unresolved = precondition_status(iid)
     if not unlocked:
@@ -370,7 +468,7 @@ def level_page(n):
     with c:lv(n).__setitem__('notes',st.text_area('Level notes',lv(n).get('notes',''),height=180,key=f'ln-{n}'))
     with d:progress_tab(n)
     st.divider();back,_,save,complete_btn=st.columns([1.3,4,1,1.6]);back.button('← Back to Overview',on_click=lambda:st.session_state.__setitem__('page','assessment'),use_container_width=True)
-    if save.button('Save Draft',use_container_width=True):save_project();st.toast('Draft saved',icon='💾')
+    if save.button('Save Draft',use_container_width=True):save_response();st.toast('Draft saved',icon='💾')
     #if lv(n)['complete']:
         #if complete_btn.button('Reopen Level',use_container_width=True):lv(n)['complete']=False;save_project();st.rerun()
     #elif complete_btn.button(f'Mark Level {n} as Complete',type='primary',use_container_width=True):
@@ -378,7 +476,20 @@ def level_page(n):
             #if counts(n)[0]==t:lv(n)['complete']=True;save_project();st.toast(f'Level {n} marked complete',icon='🎉');st.rerun()
             #else:st.warning(f'{t-counts(n)[0]} indicator(s) still require a valid assessment.')
 def header():
-    s=st.session_state;c1,c2,c3=st.columns([5,3,.6],vertical_alignment='center');c1.markdown("<div class='brand'>🌿 Sustainability Maturity Tool<br><span>Measure • Improve • Build a Greener DevOps</span></div>",unsafe_allow_html=True);c2.selectbox('Project',s.projects,key='project',on_change=lambda:None);c3.markdown(f"<div class='avatar'>{s.user}</div>",unsafe_allow_html=True);st.divider()
+    s = st.session_state
+    c1, c2, c3 = st.columns([5, 3, .8], vertical_alignment='center')
+    c1.markdown(
+        "<div class='brand'>🌿 Sustainability Maturity Tool<br>"
+        "<span>Measure • Improve • Build a Greener DevOps</span></div>",
+        unsafe_allow_html=True
+    )
+    c2.selectbox('Project', s.projects, key='project')
+    display_code = s.respondent_code.strip() or 'Participant'
+    c3.markdown(
+        f"<div class='avatar'>{display_code[:3].upper()}</div>",
+        unsafe_allow_html=True
+    )
+    st.divider()
 def sidebar():
     p=st.session_state.page;nav=[('dashboard','🏠 Dashboard'),('assessment','📊 Maturity Assessment')]+[(f'level-{n}',f'{n} · Level {n} – {x["name"]}') for n,x in LEVELS.items()]+[('reports','📄 Reports'),('settings','⚙️ Settings')]
     with st.sidebar:
@@ -697,14 +808,79 @@ def reports():
     for n,x in LEVELS.items():
         ds=defs(n)
         for i in inds(n):rows.append({'Level':n,'Requirement type':ds[i['id']][6].title(),'Indicator ID':i['id'],'Indicator':i['title'],'Measurement type':ds[i['id']][4],'Status':i.get('status'),'Numeric value':i.get('numeric_value'),'Satisfied':satisfied(i,ds[i['id']]),'Notes':i.get('notes'),'Date':i.get('date'),'Evidence files':'; '.join(i.get('evidence',[]))})
-    df=pd.DataFrame(rows);st.dataframe(df,hide_index=True,use_container_width=True);stem=slug(st.session_state.project);c1,c2=st.columns(2);c1.download_button('Download CSV',df.to_csv(index=False),f'{stem}-assessment.csv','text/csv');c2.download_button('Download JSON',json.dumps(st.session_state.data,indent=2),f'{stem}-assessment.json','application/json')
-def settings():
-    s=st.session_state;st.subheader('Settings');s.user=st.text_input('Your initials',s.user,max_chars=3).upper();name=st.text_input('New project',placeholder='e.g. Payments platform')
-    if st.button('Add project'):
-        if name.strip() and name.strip() not in s.projects:s.projects.append(name.strip());save_projects();st.success(f'Added {name.strip()}')
-        else:st.error('Enter a new project name.')
+    df = pd.DataFrame(rows)
+    st.dataframe(df, hide_index=True, use_container_width=True)
 
-init();st.markdown(CSS,unsafe_allow_html=True);header();sidebar();p=st.session_state.page
+    stem = f"response-{st.session_state.response_id}"
+    c1, c2 = st.columns(2)
+    c1.download_button(
+        'Download CSV',
+        df.to_csv(index=False),
+        f'{stem}-assessment.csv',
+        'text/csv'
+    )
+    c2.download_button(
+        'Download JSON',
+        json.dumps({
+            'response_id': st.session_state.response_id,
+            'respondent_code': st.session_state.respondent_code,
+            'project': st.session_state.project,
+            'user': st.session_state.user,
+            'data': st.session_state.data
+        }, indent=2),
+        f'{stem}-assessment.json',
+        'application/json'
+    )
+def settings():
+    s = st.session_state
+    st.subheader('Respondent / Survey Session')
+
+    s.respondent_code = st.text_input(
+        'Participant code',
+        s.respondent_code,
+        help='Use the anonymous participant code provided for the survey.'
+    )
+
+    s.user = st.text_input(
+        'Your initials (optional)',
+        s.user,
+        max_chars=3
+    ).upper()
+
+    st.caption(f"Response ID: `{s.response_id}`")
+    st.caption('This response is isolated from other respondents.')
+
+    if st.button('Save respondent details'):
+        save_response()
+        st.success('Respondent details saved.')
+
+    st.divider()
+    st.subheader('Project configuration')
+    name = st.text_input('New project', placeholder='e.g. Payments platform')
+
+    if st.button('Add project'):
+        if name.strip() and name.strip() not in s.projects:
+            s.projects.append(name.strip())
+            save_projects()
+            st.success(f'Added {name.strip()}')
+        else:
+            st.error('Enter a new project name.')
+
+init()
+st.markdown(CSS, unsafe_allow_html=True)
+header()
+if st.session_state.respondent_code:
+    st.caption(
+        f"Independent survey response: **{st.session_state.respondent_code}**"
+        f" · Response ID: `{st.session_state.response_id}`"
+    )
+else:
+    st.info(
+        "Please open Settings and enter your anonymous participant code "
+        "before starting the assessment."
+    )
+sidebar()
+p=st.session_state.page
 if p.startswith('level-'):level_page(int(p.split('-')[1]))
 elif p=='assessment':assessment()
 elif p=='reports':reports()
