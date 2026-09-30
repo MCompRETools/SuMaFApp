@@ -9,7 +9,7 @@ st.set_page_config(page_title='Sustainability Maturity Tool', page_icon='🌿', 
 
 st.session_state.setdefault('page', 'dashboard')
 DATA_DIR=Path('data'); PROJECTS_FILE=DATA_DIR/'projects.json'; PAGE_SIZE=5
-QUAL=['Actively in Place','In place but without visible evidence']; BOOL=['True','False']
+QUAL=['Actively in Place','In place but without visible evidence']; BOOL=['True','False']; YES_NO_SKIP=['Yes','No / Skip']
 
 L1=[
 ('L1-01','Stakeholder awareness of sustainability goals','At project initiation, do project lead communicate sustainability objectives with the client and team members, including relevant guidelines or standards, and discuss what is and is not feasible?',['notes','upload'],'qualitative',None,'desirable'),
@@ -142,6 +142,8 @@ def template(d):
     return {
         'id': d[0], 'title': d[1], 'description': d[2],
         'evidence': [], 'notes': '', 'date': None,
+        # First gate shown to the respondent. Details are displayed only after Yes.
+        'assessment_choice': None,
         'status': ('Not evident' if d[4]=='qualitative'
                    else 'False' if d[4]=='boolean' else None),
         'numeric_value': None, 'requirement_type': d[6]
@@ -203,6 +205,31 @@ def load_response(response_id):
                 indicator['date'] = saved.get('date')
                 indicator['status'] = saved.get('status')
                 indicator['numeric_value'] = saved.get('numeric_value')
+
+                # Preserve the new Yes / No-Skip gate. For older responses,
+                # infer Yes when a substantive assessment existed.
+                choice = saved.get('assessment_choice')
+                if choice in YES_NO_SKIP:
+                    indicator['assessment_choice'] = choice
+                else:
+                    typ = current_type = next(
+                        d[4] for d in LEVELS[n]['indicators'] if d[0] == iid
+                    )
+                    if typ == 'qualitative':
+                        indicator['assessment_choice'] = (
+                            'Yes' if saved.get('status') in QUAL else None
+                        )
+                    elif typ == 'boolean':
+                        indicator['assessment_choice'] = (
+                            'Yes' if saved.get('status') == 'True' else None
+                        )
+                    else:
+                        indicator['assessment_choice'] = (
+                            'Yes' if (
+                                saved.get('numeric_value') is not None
+                                or saved.get('status') in QUAL
+                            ) else None
+                        )
 
                 # Keep the current maturity-model classification.
                 current = next(
@@ -285,11 +312,23 @@ def lv(n):return st.session_state.data[str(n)]
 def defs(n):return {d[0]:d for d in LEVELS[n]['indicators']}
 def inds(n):return lv(n).get('indicators',[])
 def satisfied(i,d):
+    # "No / Skip" is equivalent to the former "Not evident" state.
+    if i.get('assessment_choice') != 'Yes':
+        return False
+
     typ=d[4]
-    if typ=='qualitative': return i.get('status')=='Active'
-    if typ=='boolean': return i.get('status')=='True'
-    if typ=='qualitative_numeric': return i.get('status')=='Active' and i.get('numeric_value') is not None and i.get('numeric_value')>0
-    if typ=='numeric': return i.get('numeric_value') is not None and i.get('numeric_value')>0
+    if typ=='qualitative':
+        return i.get('status') == 'Actively in Place'
+    if typ=='boolean':
+        return i.get('status')=='True'
+    if typ=='qualitative_numeric':
+        return (
+            i.get('status') == 'Actively in Place'
+            and i.get('numeric_value') is not None
+            and i.get('numeric_value') > 0
+        )
+    if typ=='numeric':
+        return i.get('numeric_value') is not None and i.get('numeric_value') > 0
     return False
 
 def complete(i,d):
@@ -370,56 +409,167 @@ def render_locked_indicator(
 
 
 
-def indicator_card(n,i,d):
-    iid=i['id']; key=f'{st.session_state.response_id}-{iid}'; typ=d[4]; requirement=d[6].title()
+def indicator_card(n, i, d):
+    """Render exactly one indicator, with a Yes / No-Skip gate."""
+    iid = i['id']
+    key = f'{st.session_state.response_id}-{iid}'
+    typ = d[4]
+    requirement = d[6].title()
 
     unlocked, unresolved = precondition_status(iid)
     if not unlocked:
         render_locked_indicator(
-            iid,
-            i['title'],
-            i['description'],
-            requirement,
-            unresolved
+            iid, i['title'], i['description'], requirement, unresolved
         )
         return
 
-    # Use native Streamlit rendering for the indicator description.
-    # This avoids literal HTML appearing in the UI.
     with st.container(border=True):
         st.markdown(f"**{iid}  {i['title']}**")
         st.caption(f"Type: {requirement}")
         st.markdown(f"**Observable condition:** {i['description']}")
-    e,m=st.columns([1.5,1],gap='large')
-    with e:
-        st.markdown("<div class='label'>Evidence</div>",unsafe_allow_html=True)
-        if 'notes' in d[3]:
-            i['notes']=st.text_area('Notes',i.get('notes',''),key=key+'-notes',height=95,placeholder='Record the activity, discussion, decision, or observation...')
-        if 'upload' in d[3]:
-            files=st.file_uploader('Supporting document',accept_multiple_files=True,key=key+'-files')
-            save_uploads(i,files)
-            if i['evidence']:
-                st.caption(f"📎 {len(i['evidence'])} supporting file(s) saved")
-                for fn in i['evidence']:
-                    p=evidence_path(iid,fn)
-                    if p.exists():st.download_button(f'View/download {fn}',p.read_bytes(),file_name=fn,key=key+'-dl-'+slug(fn))
-    with m:
-        st.markdown("<div class='label'>Status / measurement</div>",unsafe_allow_html=True)
-        if typ=='qualitative':
-            cur=i.get('status') or 'Not evident';i['status']=st.selectbox('Status',QUAL,index=QUAL.index(cur),key=key+'-status')
-        elif typ=='boolean':
-            cur=i.get('status') or 'False';i['status']=st.selectbox('Status',BOOL,index=BOOL.index(cur),key=key+'-status')
-        elif typ=='qualitative_numeric':
-            cur=i.get('status') or 'Not evident';i['status']=st.selectbox('Qualitative status',QUAL,index=QUAL.index(cur),key=key+'-status')
-            i['numeric_value']=st.number_input(d[5],min_value=0,step=1,value=0 if i.get('numeric_value') is None else int(i['numeric_value']),key=key+'-num')
-        elif typ=='numeric':
-            i['numeric_value']=st.number_input(d[5],min_value=0,step=1,value=0 if i.get('numeric_value') is None else int(i['numeric_value']),key=key+'-num')
-    c1,c2=st.columns([1,1])
-    with c1:
-        cur=date.fromisoformat(i['date']) if i.get('date') else None
-        x=st.date_input('Recorded date',value=cur,format='YYYY-MM-DD',key=key+'-date');i['date']=x.isoformat() if x else None
-    with c2: st.caption('Changes are saved with “Save Draft”.')
-    st.divider()
+
+    # First decision: is this indicator applicable/evident enough to assess?
+    current_choice = i.get('assessment_choice')
+    if current_choice not in YES_NO_SKIP:
+        current_choice = None
+
+    choice = st.radio(
+        "Is this indicator applicable / present?",
+        YES_NO_SKIP,
+        index=None if current_choice is None else YES_NO_SKIP.index(current_choice),
+        key=key + '-choice',
+        horizontal=True,
+        help='Select Yes to record evidence and assessment. Select No / Skip to treat this indicator as not evident.'
+    )
+
+    # Keep the choice in the in-memory response immediately.
+    if choice:
+        i['assessment_choice'] = choice
+
+    if choice == 'Yes':
+        e, m = st.columns([1.5, 1], gap='large')
+
+        with e:
+            st.markdown("**Evidence**")
+
+            if 'notes' in d[3]:
+                i['notes'] = st.text_area(
+                    'Notes',
+                    i.get('notes', ''),
+                    key=key + '-notes',
+                    height=95,
+                    placeholder='Record the activity, discussion, decision, or observation...'
+                )
+
+            if 'upload' in d[3]:
+                files = st.file_uploader(
+                    'Supporting document',
+                    accept_multiple_files=True,
+                    key=key + '-files'
+                )
+                save_uploads(i, files)
+
+                if i['evidence']:
+                    st.caption(f"📎 {len(i['evidence'])} supporting file(s) saved")
+                    for fn in i['evidence']:
+                        ep = evidence_path(iid, fn)
+                        if ep.exists():
+                            st.download_button(
+                                f'View/download {fn}',
+                                ep.read_bytes(),
+                                file_name=fn,
+                                key=key + '-dl-' + slug(fn)
+                            )
+
+        with m:
+            st.markdown("**Status / measurement**")
+
+            if typ == 'qualitative':
+                cur = i.get('status')
+                if cur not in QUAL:
+                    cur = QUAL[0]
+                i['status'] = st.selectbox(
+                    'Status',
+                    QUAL,
+                    index=QUAL.index(cur),
+                    key=key + '-status'
+                )
+
+            elif typ == 'boolean':
+                cur = i.get('status')
+                if cur not in BOOL:
+                    cur = BOOL[0]
+                i['status'] = st.selectbox(
+                    'Status',
+                    BOOL,
+                    index=BOOL.index(cur),
+                    key=key + '-status'
+                )
+
+            elif typ == 'qualitative_numeric':
+                cur = i.get('status')
+                if cur not in QUAL:
+                    cur = QUAL[0]
+                i['status'] = st.selectbox(
+                    'Qualitative status',
+                    QUAL,
+                    index=QUAL.index(cur),
+                    key=key + '-status'
+                )
+                i['numeric_value'] = st.number_input(
+                    d[5],
+                    min_value=0,
+                    step=1,
+                    value=0 if i.get('numeric_value') is None else int(i['numeric_value']),
+                    key=key + '-num'
+                )
+
+            elif typ == 'numeric':
+                i['numeric_value'] = st.number_input(
+                    d[5],
+                    min_value=0,
+                    step=1,
+                    value=0 if i.get('numeric_value') is None else int(i['numeric_value']),
+                    key=key + '-num'
+                )
+
+        c1, c2 = st.columns([1, 1])
+        with c1:
+            cur = date.fromisoformat(i['date']) if i.get('date') else None
+            x = st.date_input(
+                'Recorded date',
+                value=cur,
+                format='YYYY-MM-DD',
+                key=key + '-date'
+            )
+            i['date'] = x.isoformat() if x else None
+        with c2:
+            st.caption('Complete the fields above, then use one of the save buttons below.')
+
+    elif choice == 'No / Skip':
+        # No / Skip is explicitly equivalent to the former Not evident state.
+        i['status'] = 'Not evident' if typ in ('qualitative', 'qualitative_numeric') else (
+            'False' if typ == 'boolean' else i.get('status')
+        )
+        i['numeric_value'] = None
+        i['notes'] = ''
+        st.info('No / Skip recorded. This indicator is treated as not evident and does not contribute to maturity progress.')
+
+    else:
+        st.info('Select **Yes** to record evidence and an assessment, or **No / Skip** to treat the indicator as not evident.')
+
+
+def indicators_tab(n):
+    """Compatibility wrapper: render only the current indicator."""
+    a = inds(n)
+    if not a:
+        st.info(f'Level {n} yet to be built!!!!')
+        return
+
+    idx = st.session_state.get(f'indicator-{n}', 0)
+    idx = max(0, min(idx, len(a) - 1))
+    indicator_card(n, a[idx], defs(n)[a[idx]['id']])
+
 
 def indicators_tab(n):
     a=inds(n); ds=defs(n)
@@ -459,21 +609,87 @@ def progress_tab(n):
         })
     st.dataframe(pd.DataFrame(rows),hide_index=True,use_container_width=True)
 def level_page(n):
-    x=LEVELS[n];st.markdown(f"<div class='banner'><div class='badge'>{n}</div><div style='flex:1'><h2>Level {n} – {x['name']}</h2><p>{x['desc']}</p></div><div class='tip'><b>💡 Evidence recording</b><br>Each indicator has its own evidence and assessment fields.<br><br>🔒 Indicators with unmet prerequisites remain locked.</div></div>",unsafe_allow_html=True)
-    if lv(n)['complete']:st.success(f'Level {n} is marked complete.')
-    a,b,c,d=st.tabs(['Indicators','Evidence Summary','Level Notes','Progress'])
-    with a:indicators_tab(n)
-    with b:evidence_tab(n)
-    with c:lv(n).__setitem__('notes',st.text_area('Level notes',lv(n).get('notes',''),height=180,key=f'ln-{n}'))
-    with d:progress_tab(n)
-    st.divider();back,_,save,complete_btn=st.columns([1.3,4,1,1.6]);back.button('← Back to Overview',on_click=lambda:st.session_state.__setitem__('page','assessment'),use_container_width=True)
-    if save.button('Save Draft',use_container_width=True):save_response();st.toast('Draft saved',icon='💾')
-    #if lv(n)['complete']:
-        #if complete_btn.button('Reopen Level',use_container_width=True):lv(n)['complete']=False;save_project();st.rerun()
-    #elif complete_btn.button(f'Mark Level {n} as Complete',type='primary',use_container_width=True):
-        #if t:=counts(n)[1]:
-            #if counts(n)[0]==t:lv(n)['complete']=True;save_project();st.toast(f'Level {n} marked complete',icon='🎉');st.rerun()
-            #else:st.warning(f'{t-counts(n)[0]} indicator(s) still require a valid assessment.')
+    x = LEVELS[n]
+    a = inds(n)
+
+    if not a:
+        st.markdown(
+            f"<div class='banner'><div class='badge'>{n}</div>"
+            f"<div style='flex:1'><h2>Level {n} – {x['name']}</h2>"
+            f"<p>{x['desc']}</p></div></div>",
+            unsafe_allow_html=True
+        )
+        st.info(f'Level {n} indicators are not configured yet.')
+        return
+
+    # One indicator per page.
+    pk = f'indicator-{n}'
+    idx = max(0, min(st.session_state.get(pk, 0), len(a) - 1))
+    st.session_state[pk] = idx
+
+    st.markdown(
+        f"<div class='banner'><div class='badge'>{n}</div>"
+        f"<div style='flex:1'><h2>Level {n} – {x['name']}</h2>"
+        f"<p>{x['desc']}</p></div></div>",
+        unsafe_allow_html=True
+    )
+
+    if n == 1:
+        st.caption('This is best to do at project initiation. But not restricted to it.')
+    elif n == 2:
+        st.caption('This is best to do at feature planning stage. The indicators assess how sustainable your organization’s approach is.')
+
+    st.markdown(
+        f"### Indicator {idx + 1} of {len(a)}"
+    )
+
+    # Render exactly one indicator.
+    indicator_card(n, a[idx], defs(n)[a[idx]['id']])
+
+    st.divider()
+
+    # Navigation / save actions.
+    prev_col, exit_col, next_col = st.columns([1.2, 1.8, 1.8])
+
+    with prev_col:
+        if st.button(
+            '← Previous',
+            disabled=idx == 0,
+            use_container_width=True,
+            key=f'prev-indicator-{n}'
+        ):
+            save_response()
+            st.session_state[pk] = idx - 1
+            st.rerun()
+
+    with exit_col:
+        if st.button(
+            'Save and exit',
+            use_container_width=True,
+            key=f'exit-indicator-{n}'
+        ):
+            save_response()
+            st.session_state.page = 'dashboard'
+            st.rerun()
+
+    with next_col:
+        next_label = 'Save and go to next'
+        if st.button(
+            next_label,
+            type='primary',
+            use_container_width=True,
+            key=f'next-indicator-{n}'
+        ):
+            save_response()
+
+            if idx < len(a) - 1:
+                st.session_state[pk] = idx + 1
+                st.rerun()
+            else:
+                # At the final indicator, return to the dashboard.
+                st.session_state.page = 'dashboard'
+                st.rerun()
+
 def header():
     s = st.session_state
     c1, c2, c3 = st.columns([5, 3, .8], vertical_alignment='center')
