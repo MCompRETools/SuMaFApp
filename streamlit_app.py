@@ -428,7 +428,7 @@ def indicator_card(n, i, d):
     with st.container(border=True):
         st.markdown(f"**{iid}  {i['title']}**")
         st.caption(f"Type: {requirement}")
-        st.markdown(f"**Observable condition:** {i['description']}")
+        st.markdown(f"**What is Required:** {i['description']}")
 
     # First decision: is this indicator applicable/evident enough to assess?
     current_choice = i.get('assessment_choice')
