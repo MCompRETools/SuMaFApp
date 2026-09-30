@@ -876,16 +876,16 @@ def settings():
 init()
 st.markdown(CSS, unsafe_allow_html=True)
 header()
-if st.session_state.respondent_code:
-    st.caption(
+#if st.session_state.respondent_code:
+    #st.caption(
         #f"Independent survey response: **{st.session_state.respondent_code}**"
-        f" · Response ID: `{st.session_state.response_id}`"
-    )
-else:
-    st.info(
-        "Please open Settings and enter your unique anonymous participant code "
-        "before starting the assessment. Each browser session is isolated."
-    )
+        #f" · Response ID: `{st.session_state.response_id}`"
+    #)
+#else:
+    #st.info(
+        #"Please open Settings and enter your unique anonymous participant code "
+        #"before starting the assessment. Each browser session is isolated."
+    #)
 sidebar()
 p=st.session_state.page
 if p.startswith('level-'):level_page(int(p.split('-')[1]))
