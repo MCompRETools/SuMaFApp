@@ -1359,7 +1359,7 @@ def assessment():
     )
 
     st.divider()
-    st.subheader("Suggestions — Attempt to achieve indicators--")
+    st.subheader("Your Progress Insights---")
 
     suggestions_found = False
 
