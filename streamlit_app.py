@@ -1088,6 +1088,7 @@ def dashboard_progress_bar(n):
             border: 1px solid #d9d9d9;
             border-radius: 8px;
             margin-top: 8px;
+            margin-bottom: 70px;
             box-sizing: border-box;
         }}
 
@@ -1121,7 +1122,7 @@ def dashboard_progress_bar(n):
             position: absolute;
             z-index: 9999;
             left: 50%;
-            bottom: calc(100% + 8px);
+            top: calc(100% + 8px);
             transform: translateX(-50%);
             width: 270px;
             background: #222;
@@ -1138,12 +1139,12 @@ def dashboard_progress_bar(n):
         .tooltip::after {{
             content: "";
             position: absolute;
-            top: 100%;
+            bottom: 100%;
             left: 50%;
             margin-left: -6px;
             border-width: 6px;
             border-style: solid;
-            border-color: #222 transparent transparent transparent;
+            border-color: transparent transparent
         }}
 
         .progress-segment:hover .tooltip {{
@@ -1212,7 +1213,7 @@ def dashboard_progress_bar(n):
 
     components.html(
         html,
-        height=125,
+        height=190,
         scrolling=False
     )
 
