@@ -870,15 +870,54 @@ def level_progress_condition(n):
     )
 
     # Condition 2: more than 30% of desirable + optional indicators.
-    desirable_optional_ratio = (
-        desirable_optional_satisfied / len(desirable_optional)
-        if desirable_optional
-        else 0
-    )
+        # Condition 2: Sufficient+
+    if n == 1:
+    # Level 1:
+    # Sufficient+ is based on the important desirable
+    # indicators that act as prerequisites for Level 2.
+        next_level_prerequisites = set()
 
-    sufficient_plus = (
-        desirable_optional_ratio > 0.30
-    )
+        for indicator_id, prerequisites in PRECONDITIONS.items():
+            if indicator_id.startswith('L2-'):
+                for prerequisite in prerequisites:
+                    if prerequisite.startswith('L1-'):
+                        next_level_prerequisites.add(prerequisite)
+
+        important_desirable = [
+            i for i in desirable_optional
+            if i['id'] in next_level_prerequisites
+        ]
+
+        important_desirable_satisfied = sum(
+            satisfied(i, ds[i['id']])
+            for i in important_desirable
+        )
+
+        sufficient_plus = (
+            bool(important_desirable)
+            and important_desirable_satisfied == len(important_desirable)
+        )
+
+    elif n == 2:
+        # Level 2:
+        # Any 60% of desirable indicators.
+        desirable = [
+            i for i in a
+            if ds[i['id']][6].lower() == 'desirable'
+        ]
+
+        desirable_satisfied = sum(
+            satisfied(i, ds[i['id']])
+            for i in desirable
+        )
+    
+        sufficient_plus = (
+            bool(desirable)
+            and desirable_satisfied >= ceil(len(desirable) * 0.60)
+        )
+
+    else:
+        sufficient_plus = False
 
     # Condition 3: at least 80% of all indicators.
     overall_ratio = all_satisfied / len(a)
@@ -900,7 +939,8 @@ def level_progress_condition(n):
 
 
 def dashboard_progress_bar(n):
-    """Render one horizontal three-section maturity progress bar."""
+    """Render one horizontal three-section maturity progress bar with hover explanations."""
+
     result = level_progress_condition(n)
 
     required_total = result["required_total"]
@@ -914,6 +954,9 @@ def dashboard_progress_bar(n):
     sufficient_plus = result["sufficient_plus"]
     advanced = result["advanced"]
 
+    # ---------------------------------------------------------
+    # Helper for colour/state
+    # ---------------------------------------------------------
     def state_colour(met, partial):
         if met:
             return "green"
@@ -939,8 +982,9 @@ def dashboard_progress_bar(n):
 
     advanced_colour = state_colour(
         advanced,
-        all_satisfied > 0 and all_satisfied / all_total < 0.80
-        if all_total else False
+        all_satisfied > 0
+        and all_total > 0
+        and all_satisfied / all_total < 0.80
     )
 
     colours = {
@@ -949,46 +993,257 @@ def dashboard_progress_bar(n):
         "green": "#d1e7dd",
     }
 
+    # ---------------------------------------------------------
+    # Indicator definitions
+    # ---------------------------------------------------------
+    indicators = inds(n)
+    definitions = defs(n)
+
+    required_ids = [
+        i["id"]
+        for i in indicators
+        if definitions[i["id"]][6].lower() == "required"
+    ]
+
+    desirable_ids = [
+        i["id"]
+        for i in indicators
+        if definitions[i["id"]][6].lower() == "desirable"
+    ]
+
+    optional_ids = [
+        i["id"]
+        for i in indicators
+        if definitions[i["id"]][6].lower() == "optional"
+    ]
+
+    # ---------------------------------------------------------
+    # Build hover text according to maturity level
+    # ---------------------------------------------------------
+    if n == 1:
+
+        # Sufficient:
+        # Show required indicator IDs
+        sufficient_hover = (
+            "Required indicators:<br>"
+            + "<br>".join(required_ids)
+        )
+
+        # Sufficient+:
+        # Show desirable indicators that are prerequisites
+        # for Level 2.
+        next_level_ids = set()
+
+        for indicator_id, prerequisites in PRECONDITIONS.items():
+            if indicator_id.startswith("L2-"):
+                for prerequisite in prerequisites:
+                    if prerequisite.startswith("L1-"):
+                        next_level_ids.add(prerequisite)
+
+        sufficient_plus_ids = [
+            indicator_id
+            for indicator_id in desirable_ids
+            if indicator_id in next_level_ids
+        ]
+
+        sufficient_plus_hover = (
+            "Most important desirable indicators for Level 2:"
+            "<br>"
+            + (
+                "<br>".join(sufficient_plus_ids)
+                if sufficient_plus_ids
+                else "None"
+            )
+        )
+
+        # Advanced:
+        advanced_hover = (
+            "Fulfill more than 70% of desired and optional indicators"
+        )
+
+    elif n == 2:
+
+        # Sufficient:
+        # Show required indicator IDs
+        sufficient_hover = (
+            "Required indicators:<br>"
+            + "<br>".join(required_ids)
+        )
+
+        # Sufficient+:
+        # Any 60% of desirable indicators
+        desirable_count = len(desirable_ids)
+
+        sufficient_plus_count = (
+            max(1, ceil(desirable_count * 0.60))
+            if desirable_count
+            else 0
+        )
+
+        sufficient_plus_ids = desirable_ids[:sufficient_plus_count]
+
+        sufficient_plus_hover = (
+            f"Fulfill any 60% of desirable indicators "
+            f"({sufficient_plus_count} of {desirable_count}):"
+            "<br>"
+            + (
+                "<br>".join(sufficient_plus_ids)
+                if sufficient_plus_ids
+                else "None"
+            )
+        )
+
+        # Advanced:
+        advanced_hover = (
+            "Fulfill more than 70% of desired and optional indicators"
+        )
+
+    else:
+        # Future levels
+        sufficient_hover = "Required indicators"
+        sufficient_plus_hover = "Desirable indicators"
+        advanced_hover = (
+            "Fulfill more than 70% of desired and optional indicators"
+        )
+
+    # ---------------------------------------------------------
+    # Progress bar segments
+    # ---------------------------------------------------------
     segments = [
         (
             "Sufficient",
             sufficient_colour,
             f"{required_satisfied}/{required_total} required",
+            sufficient_hover,
         ),
         (
             "Sufficient+",
             sufficient_plus_colour,
             f"{dopt_satisfied}/{dopt_total} desirable + optional",
+            sufficient_plus_hover,
         ),
         (
             "Advanced",
             advanced_colour,
             f"{all_satisfied}/{all_total} indicators",
+            advanced_hover,
         ),
     ]
 
-    segment_html = "".join(
-        f"""
-        <div style="
-            flex:1;
-            background:{colours[colour]};
-            padding:12px 14px;
-            min-height:82px;
-            border-right:1px solid #d9d9d9;
-        ">
-            <div style="font-weight:700;margin-bottom:6px;">{title}</div>
-            <div style="font-size:13px;">{detail}</div>
+    # ---------------------------------------------------------
+    # Render HTML with CSS hover tooltip
+    # ---------------------------------------------------------
+    segment_html = ""
+
+    for title, colour, detail, hover_text in segments:
+
+        segment_html += f"""
+        <div class="progress-hover-wrapper">
+
+            <div
+                class="progress-segment-hover"
+                style="
+                    flex:1;
+                    background:{colours[colour]};
+                    padding:12px 14px;
+                    min-height:82px;
+                    border-right:1px solid #d9d9d9;
+                "
+            >
+
+                <div style="
+                    font-weight:700;
+                    margin-bottom:6px;
+                ">
+                    {title}
+                </div>
+
+                <div style="
+                    font-size:13px;
+                ">
+                    {detail}
+                </div>
+
+                <div class="progress-tooltip">
+                    {hover_text}
+                </div>
+
+            </div>
+
         </div>
         """
-        for title, colour, detail in segments
-    )
 
     st.markdown(
         f"""
+        <style>
+
+        .progress-hover-wrapper {{
+            flex:1;
+            min-width:0;
+            position:relative;
+        }}
+
+        .progress-segment-hover {{
+            position:relative;
+            cursor:help;
+        }}
+
+        .progress-tooltip {{
+            visibility:hidden;
+            opacity:0;
+
+            position:absolute;
+            z-index:9999;
+
+            left:50%;
+            bottom:calc(100% + 10px);
+            transform:translateX(-50%);
+
+            width:260px;
+            max-width:260px;
+
+            background:#26352e;
+            color:white;
+
+            padding:10px 12px;
+            border-radius:7px;
+
+            font-size:12px;
+            line-height:1.5;
+
+            text-align:left;
+
+            box-shadow:0 4px 12px rgba(0,0,0,.20);
+
+            transition:opacity .15s ease;
+        }}
+
+        .progress-segment-hover:hover .progress-tooltip {{
+            visibility:visible;
+            opacity:1;
+        }}
+
+        .progress-tooltip::after {{
+            content:"";
+
+            position:absolute;
+            top:100%;
+            left:50%;
+
+            margin-left:-6px;
+
+            border-width:6px;
+            border-style:solid;
+
+            border-color:#26352e transparent transparent transparent;
+        }}
+
+        </style>
+
         <div style="
             display:flex;
             width:100%;
-            overflow:hidden;
+            overflow:visible;
             border:1px solid #d9d9d9;
             border-radius:8px;
             margin-top:8px;
