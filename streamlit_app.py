@@ -1036,18 +1036,18 @@ def dashboard_progress_bar(n):
 
     if n == 1:
         sufficient_plus_hover = (
-            "<b>Focus on:</b><br>"
+            "<b>Indicators to Satisfy:</b><br>"
             + (
-               "," .join(important_desirable_ids)
+               ", " .join(important_desirable_ids)
                 if important_desirable_ids
                 else "None identified"
             )
         )
     elif n == 2:
         sufficient_plus_hover = (
-            "<b>Focus on:</b><br>"
+            "<b>Indicators to Satisfy:</b><br>"
             + (
-                ",".join(desirable_ids)
+                ", ".join(desirable_ids)
                 if desirable_ids
                 else "None identified"
             )
@@ -1058,7 +1058,7 @@ def dashboard_progress_bar(n):
     required_hover = (
         "<b>Required indicators:</b><br>"
         + (
-            "<br>".join(required_ids)
+            ", ".join(required_ids)
             if required_ids
             else "None identified"
         )
