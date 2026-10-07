@@ -684,21 +684,21 @@ def level_page(n):
     back, _, save_next, save_exit = st.columns([1.2, 3, 2.2, 1.8])
 
     with back:
-    if st.button(
-        '← Previous',
-        use_container_width=True,
-        key=f'level-previous-{n}'
-    ):
-        save_response()
-
-        if idx == 0:
-            # First indicator → Dashboard
-            go('dashboard')
-        else:
-            # Otherwise → previous indicator
-            st.session_state.level_indicator_index[n] = idx - 1
-
-        st.rerun()
+        if st.button(
+            '← Previous',
+            use_container_width=True,
+            key=f'level-previous-{n}'
+        ):
+            save_response()
+    
+            if idx == 0:
+                # First indicator → Dashboard
+                go('dashboard')
+            else:
+                # Otherwise → previous indicator
+                st.session_state.level_indicator_index[n] = idx - 1
+    
+            st.rerun()
 
     with save_next:
         if is_last:
