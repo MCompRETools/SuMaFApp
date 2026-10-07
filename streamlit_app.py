@@ -12,7 +12,7 @@ DATA_DIR=Path('data'); PROJECTS_FILE=DATA_DIR/'projects.json'; PAGE_SIZE=5
 QUAL=['Actively in Place','In place but without visible evidence']; BOOL=['True','False']; YES_NO_SKIP=['Yes','No / Skip']
 
 L1=[
-('L1-01','Awareness of sustainability goals','At project initiation, do project lead communicate sustainability objectives with the client and team members, including relevant guidelines or standards, and discuss what is and is not feasible?',['notes','upload'],'qualitative','Assign a qualitative degree of satisfaction of the activity required','desirable'),
+('L1-01','Awareness of sustainability goals','At project initiation, do project lead communicate sustainability objectives with the client and team members, including relevant guidelines or standards, and discuss what is and is not feasible?',['notes','upload'],'qualitative',None,'desirable'),
 ('L1-02','Awareness of environmental, technical and social sustainability','Do team members participate or enroll in mandatory courses or training on environmental, technical, and social sustainability concepts?',['notes','upload'],'boolean',None,'required'),
 ('L1-03','Awareness of energy or resource implications','Do team members discuss how builds, testing, deployments and infrastructure usage can have energy and resource implications?',['notes'],'qualitative_numeric','Number of sessions done','desirable'),
 ('L1-04','Awareness of technical debt impact','Does the team lead or Technical Architect provides guidance on how technical debt can affect maintainability, software longevity, development effort and long-term sustainability?',['notes'],'boolean',None,'desirable'),
