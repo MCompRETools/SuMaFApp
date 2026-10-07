@@ -4,6 +4,7 @@ from datetime import date
 from math import ceil
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 st.set_page_config(page_title='Sustainability Maturity Tool', page_icon='🌿', layout='wide')
 
@@ -939,7 +940,7 @@ def level_progress_condition(n):
 
 
 def dashboard_progress_bar(n):
-    """Render one horizontal three-section maturity progress bar with hover explanations."""
+    """Render one horizontal three-section maturity progress bar with hover details."""
 
     result = level_progress_condition(n)
 
@@ -954,15 +955,12 @@ def dashboard_progress_bar(n):
     sufficient_plus = result["sufficient_plus"]
     advanced = result["advanced"]
 
-    # ---------------------------------------------------------
-    # Helper for colour/state
-    # ---------------------------------------------------------
     def state_colour(met, partial):
         if met:
-            return "green"
+            return "#d1e7dd"       # green
         if partial:
-            return "yellow"
-        return "red"
+            return "#fff3cd"       # yellow
+        return "#f8d7da"           # red
 
     sufficient_colour = state_colour(
         sufficient,
@@ -982,278 +980,241 @@ def dashboard_progress_bar(n):
 
     advanced_colour = state_colour(
         advanced,
-        all_satisfied > 0
-        and all_total > 0
-        and all_satisfied / all_total < 0.80
+        (
+            all_satisfied > 0
+            and all_total > 0
+            and all_satisfied / all_total < 0.80
+        )
     )
 
-    colours = {
-        "red": "#f8d7da",
-        "yellow": "#fff3cd",
-        "green": "#d1e7dd",
-    }
+    # ---------------------------------------------------------
+    # Build hover text
+    # ---------------------------------------------------------
 
-    # ---------------------------------------------------------
-    # Indicator definitions
-    # ---------------------------------------------------------
-    indicators = inds(n)
+    level_indicators = inds(n)
     definitions = defs(n)
 
+    # Required indicator IDs
     required_ids = [
         i["id"]
-        for i in indicators
+        for i in level_indicators
         if definitions[i["id"]][6].lower() == "required"
     ]
 
+    # Level 1 Sufficient+:
+    # desirable indicators that are prerequisites for Level 2
+    important_desirable_ids = []
+
+    if n == 1:
+        level_2_indicators = inds(2)
+        level_2_definitions = defs(2)
+
+        level_2_prereqs = set()
+
+        for indicator in level_2_indicators:
+            iid = indicator["id"]
+            for prereq in PRECONDITIONS.get(iid, []):
+                level_2_prereqs.add(prereq)
+
+        important_desirable_ids = [
+            i["id"]
+            for i in level_indicators
+            if (
+                i["id"] in level_2_prereqs
+                and level_2_definitions is not None
+                and definitions[i["id"]][6].lower() == "desirable"
+            )
+        ]
+
+    # Level 2 Sufficient+:
+    # show all desirable IDs and explain that any 60% qualify
     desirable_ids = [
         i["id"]
-        for i in indicators
+        for i in level_indicators
         if definitions[i["id"]][6].lower() == "desirable"
     ]
 
-    optional_ids = [
-        i["id"]
-        for i in indicators
-        if definitions[i["id"]][6].lower() == "optional"
-    ]
-
-    # ---------------------------------------------------------
-    # Build hover text according to maturity level
-    # ---------------------------------------------------------
     if n == 1:
-
-        # Sufficient:
-        # Show required indicator IDs
-        sufficient_hover = (
-            "Required indicators:<br>"
-            + "<br>".join(required_ids)
-        )
-
-        # Sufficient+:
-        # Show desirable indicators that are prerequisites
-        # for Level 2.
-        next_level_ids = set()
-
-        for indicator_id, prerequisites in PRECONDITIONS.items():
-            if indicator_id.startswith("L2-"):
-                for prerequisite in prerequisites:
-                    if prerequisite.startswith("L1-"):
-                        next_level_ids.add(prerequisite)
-
-        sufficient_plus_ids = [
-            indicator_id
-            for indicator_id in desirable_ids
-            if indicator_id in next_level_ids
-        ]
-
         sufficient_plus_hover = (
-            "Most important desirable indicators for Level 2:"
-            "<br>"
+            "<b>Most important desirable indicators for the next level:</b><br>"
             + (
-                "<br>".join(sufficient_plus_ids)
-                if sufficient_plus_ids
-                else "None"
+                "<br>".join(important_desirable_ids)
+                if important_desirable_ids
+                else "None identified"
             )
         )
-
-        # Advanced:
-        advanced_hover = (
-            "Fulfill more than 70% of desired and optional indicators"
-        )
-
     elif n == 2:
-
-        # Sufficient:
-        # Show required indicator IDs
-        sufficient_hover = (
-            "Required indicators:<br>"
-            + "<br>".join(required_ids)
-        )
-
-        # Sufficient+:
-        # Any 60% of desirable indicators
-        desirable_count = len(desirable_ids)
-
-        sufficient_plus_count = (
-            max(1, ceil(desirable_count * 0.60))
-            if desirable_count
-            else 0
-        )
-
-        sufficient_plus_ids = desirable_ids[:sufficient_plus_count]
-
         sufficient_plus_hover = (
-            f"Fulfill any 60% of desirable indicators "
-            f"({sufficient_plus_count} of {desirable_count}):"
-            "<br>"
+            "<b>Any 60% of these desirable indicators:</b><br>"
             + (
-                "<br>".join(sufficient_plus_ids)
-                if sufficient_plus_ids
-                else "None"
+                "<br>".join(desirable_ids)
+                if desirable_ids
+                else "None identified"
             )
         )
-
-        # Advanced:
-        advanced_hover = (
-            "Fulfill more than 70% of desired and optional indicators"
-        )
-
     else:
-        # Future levels
-        sufficient_hover = "Required indicators"
-        sufficient_plus_hover = "Desirable indicators"
-        advanced_hover = (
-            "Fulfill more than 70% of desired and optional indicators"
+        sufficient_plus_hover = "<b>Desirable indicators</b>"
+
+    required_hover = (
+        "<b>Required indicators:</b><br>"
+        + (
+            "<br>".join(required_ids)
+            if required_ids
+            else "None identified"
         )
+    )
+
+    advanced_hover = (
+        "Fulfill more than 70% of desired and optional indicators"
+    )
 
     # ---------------------------------------------------------
-    # Progress bar segments
+    # HTML
     # ---------------------------------------------------------
-    segments = [
-        (
-            "Sufficient",
-            sufficient_colour,
-            f"{required_satisfied}/{required_total} required",
-            sufficient_hover,
-        ),
-        (
-            "Sufficient+",
-            sufficient_plus_colour,
-            f"{dopt_satisfied}/{dopt_total} desirable + optional",
-            sufficient_plus_hover,
-        ),
-        (
-            "Advanced",
-            advanced_colour,
-            f"{all_satisfied}/{all_total} indicators",
-            advanced_hover,
-        ),
-    ]
 
-    # ---------------------------------------------------------
-    # Render HTML with CSS hover tooltip
-    # ---------------------------------------------------------
-    segment_html = ""
+    html = f"""
+    <style>
+        body {{
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: transparent;
+        }}
 
-    for title, colour, detail, hover_text in segments:
+        .progress-container {{
+            display: flex;
+            width: 100%;
+            overflow: visible;
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            margin-top: 8px;
+            box-sizing: border-box;
+        }}
 
-        segment_html += f"""
-        <div class="progress-hover-wrapper">
+        .progress-segment {{
+            position: relative;
+            flex: 1;
+            padding: 12px 14px;
+            min-height: 82px;
+            box-sizing: border-box;
+            border-right: 1px solid #d9d9d9;
+            cursor: help;
+        }}
 
-            <div
-                class="progress-segment-hover"
-                style="
-                    flex:1;
-                    background:{colours[colour]};
-                    padding:12px 14px;
-                    min-height:82px;
-                    border-right:1px solid #d9d9d9;
-                "
-            >
+        .progress-segment:last-child {{
+            border-right: none;
+        }}
 
-                <div style="
-                    font-weight:700;
-                    margin-bottom:6px;
-                ">
-                    {title}
-                </div>
+        .segment-title {{
+            font-weight: 700;
+            margin-bottom: 6px;
+            font-size: 15px;
+        }}
 
-                <div style="
-                    font-size:13px;
-                ">
-                    {detail}
-                </div>
+        .segment-detail {{
+            font-size: 13px;
+        }}
 
-                <div class="progress-tooltip">
-                    {hover_text}
-                </div>
+        .tooltip {{
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            z-index: 9999;
+            left: 50%;
+            bottom: calc(100% + 8px);
+            transform: translateX(-50%);
+            width: 270px;
+            background: #222;
+            color: white;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1.45;
+            text-align: left;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: opacity 0.15s ease;
+        }}
 
+        .tooltip::after {{
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -6px;
+            border-width: 6px;
+            border-style: solid;
+            border-color: #222 transparent transparent transparent;
+        }}
+
+        .progress-segment:hover .tooltip {{
+            visibility: visible;
+            opacity: 1;
+        }}
+    </style>
+
+    <div class="progress-container">
+
+        <div class="progress-segment"
+             style="background:{sufficient_colour};">
+
+            <div class="segment-title">
+                Sufficient
+            </div>
+
+            <div class="segment-detail">
+                {required_satisfied}/{required_total} required
+            </div>
+
+            <div class="tooltip">
+                {required_hover}
             </div>
 
         </div>
-        """
 
-    st.markdown(
-        f"""
-        <style>
 
-        .progress-hover-wrapper {{
-            flex:1;
-            min-width:0;
-            position:relative;
-        }}
+        <div class="progress-segment"
+             style="background:{sufficient_plus_colour};">
 
-        .progress-segment-hover {{
-            position:relative;
-            cursor:help;
-        }}
+            <div class="segment-title">
+                Sufficient+
+            </div>
 
-        .progress-tooltip {{
-            visibility:hidden;
-            opacity:0;
+            <div class="segment-detail">
+                {dopt_satisfied}/{dopt_total} desirable + optional
+            </div>
 
-            position:absolute;
-            z-index:9999;
+            <div class="tooltip">
+                {sufficient_plus_hover}
+            </div>
 
-            left:50%;
-            bottom:calc(100% + 10px);
-            transform:translateX(-50%);
-
-            width:260px;
-            max-width:260px;
-
-            background:#26352e;
-            color:white;
-
-            padding:10px 12px;
-            border-radius:7px;
-
-            font-size:12px;
-            line-height:1.5;
-
-            text-align:left;
-
-            box-shadow:0 4px 12px rgba(0,0,0,.20);
-
-            transition:opacity .15s ease;
-        }}
-
-        .progress-segment-hover:hover .progress-tooltip {{
-            visibility:visible;
-            opacity:1;
-        }}
-
-        .progress-tooltip::after {{
-            content:"";
-
-            position:absolute;
-            top:100%;
-            left:50%;
-
-            margin-left:-6px;
-
-            border-width:6px;
-            border-style:solid;
-
-            border-color:#26352e transparent transparent transparent;
-        }}
-
-        </style>
-
-        <div style="
-            display:flex;
-            width:100%;
-            overflow:visible;
-            border:1px solid #d9d9d9;
-            border-radius:8px;
-            margin-top:8px;
-        ">
-            {segment_html}
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
+
+        <div class="progress-segment"
+             style="background:{advanced_colour};">
+
+            <div class="segment-title">
+                Advanced
+            </div>
+
+            <div class="segment-detail">
+                {all_satisfied}/{all_total} indicators
+            </div>
+
+            <div class="tooltip">
+                {advanced_hover}
+            </div>
+
+        </div>
+
+    </div>
+    """
+
+    components.html(
+        html,
+        height=125,
+        scrolling=False
+    )
 
 
 def dashboard():
