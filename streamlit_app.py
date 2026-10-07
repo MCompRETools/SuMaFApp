@@ -873,74 +873,77 @@ def level_progress_condition(n):
     # Condition 2: more than 30% of desirable + optional indicators.
     # Condition 2: Sufficient+
     # ---------------------------------------------------------
-# Condition 2: Sufficient+
-#
-# Sufficient+ is cumulative:
-# Sufficient must already be achieved AND the additional
-# Sufficient+ criterion must be achieved.
-# ---------------------------------------------------------
-
-if n == 1:
-    # Level 1:
-    # 1. All required indicators must be satisfied.
-    # 2. All important desirable indicators that act as
-    #    prerequisites for Level 2 must also be satisfied.
-
-    next_level_prerequisites = set()
-
-    for indicator_id, prerequisites in PRECONDITIONS.items():
-        if indicator_id.startswith('L2-'):
-            for prerequisite in prerequisites:
-                if prerequisite.startswith('L1-'):
-                    next_level_prerequisites.add(prerequisite)
-
-    important_desirable = [
-        i for i in desirable_optional
-        if (
-            i['id'] in next_level_prerequisites
-            and ds[i['id']][6].lower() == 'desirable'
+    # Condition 2: Sufficient+
+    #
+    # Sufficient+ is cumulative:
+    # Sufficient must already be achieved AND the additional
+    # Sufficient+ criterion must be achieved.
+    # ---------------------------------------------------------
+    
+    if n == 1:
+        # Level 1:
+        # 1. All required indicators must be satisfied.
+        # 2. All important desirable indicators that act as
+        #    prerequisites for Level 2 must also be satisfied.
+    
+        next_level_prerequisites = set()
+    
+        for indicator_id, prerequisites in PRECONDITIONS.items():
+            if indicator_id.startswith('L2-'):
+                for prerequisite in prerequisites:
+                    if prerequisite.startswith('L1-'):
+                        next_level_prerequisites.add(prerequisite)
+    
+        important_desirable = [
+            i for i in desirable_optional
+            if (
+                i['id'] in next_level_prerequisites
+                and ds[i['id']][6].lower() == 'desirable'
+            )
+        ]
+    
+        important_desirable_satisfied = sum(
+            satisfied(i, ds[i['id']])
+            for i in important_desirable
         )
-    ]
-
-    important_desirable_satisfied = sum(
-        satisfied(i, ds[i['id']])
-        for i in important_desirable
-    )
-
-    sufficient_plus = (
-        sufficient
-        and bool(important_desirable)
-        and important_desirable_satisfied == len(important_desirable)
-    )
-
-elif n == 2:
-    # Level 2:
-    # 1. All required indicators must be satisfied.
-    # 2. At least 60% of desirable indicators must be satisfied.
-
-    desirable = [
-        i for i in a
-        if ds[i['id']][6].lower() == 'desirable'
-    ]
-
-    desirable_satisfied = sum(
-        satisfied(i, ds[i['id']])
-        for i in desirable
-    )
-
-    sufficient_plus = (
-        sufficient
-        and bool(desirable)
-        and desirable_satisfied >= ceil(len(desirable) * 0.60)
-    )
-
-else:
-    sufficient_plus = False
+    
+        sufficient_plus = (
+            sufficient
+            and bool(important_desirable)
+            and important_desirable_satisfied == len(important_desirable)
+        )
+    
+    elif n == 2:
+        # Level 2:
+        # 1. All required indicators must be satisfied.
+        # 2. At least 60% of desirable indicators must be satisfied.
+    
+        desirable = [
+            i for i in a
+            if ds[i['id']][6].lower() == 'desirable'
+        ]
+    
+        desirable_satisfied = sum(
+            satisfied(i, ds[i['id']])
+            for i in desirable
+        )
+    
+        sufficient_plus = (
+            sufficient
+            and bool(desirable)
+            and desirable_satisfied >= ceil(len(desirable) * 0.60)
+        )
+    
+    else:
+        sufficient_plus = False
 
     # Condition 3: at least 80% of all indicators.
     overall_ratio = all_satisfied / len(a)
 
-    advanced = overall_ratio >= 0.80
+        advanced = (
+        sufficient_plus
+        and overall_ratio >= 0.80
+    )
 
     return {
         "required_total": len(required),
