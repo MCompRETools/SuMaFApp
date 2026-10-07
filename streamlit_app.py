@@ -1039,7 +1039,7 @@ def dashboard():
                     pass
 
     m3.metric(
-        "Last update",
+        "Last Access",
         last_update.strftime("%Y-%m-%d") if last_update else "Not yet updated",
     )
 
