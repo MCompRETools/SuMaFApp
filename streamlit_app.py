@@ -119,7 +119,53 @@ CSS='''<style>
     opacity:.85;
     margin-top:2px;
 }
+.progress-insights-hover{
+    position:relative;
+    display:inline-block;
+    margin:8px 0 12px 0;
+}
 
+.progress-insights-title{
+    font-size:20px;
+    font-weight:600;
+    color:#26352e;
+    cursor:help;
+}
+
+.progress-insights-tooltip{
+    visibility:hidden;
+    opacity:0;
+    position:absolute;
+    z-index:9999;
+    left:0;
+    top:calc(100% + 8px);
+    width:360px;
+    background:#222;
+    color:white;
+    padding:10px 12px;
+    border-radius:6px;
+    font-size:13px;
+    font-weight:400;
+    line-height:1.45;
+    text-align:left;
+    box-shadow:0 4px 12px rgba(0,0,0,.2);
+    transition:opacity .15s ease;
+}
+
+.progress-insights-tooltip::after{
+    content:"";
+    position:absolute;
+    bottom:100%;
+    left:24px;
+    border-width:6px;
+    border-style:solid;
+    border-color:transparent transparent #222 transparent;
+}
+
+.progress-insights-hover:hover .progress-insights-tooltip{
+    visibility:visible;
+    opacity:1;
+}
 </style>'''
 
 
@@ -1388,7 +1434,7 @@ def assessment():
     '</span>'
     '</div>',
     unsafe_allow_html=True
-)
+    )
     
     suggestions_found = False
     
