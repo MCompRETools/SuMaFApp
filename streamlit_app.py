@@ -9,7 +9,7 @@ st.set_page_config(page_title='Sustainability Maturity Tool', page_icon='🌿', 
 
 st.session_state.setdefault('page', 'dashboard')
 DATA_DIR=Path('data'); PROJECTS_FILE=DATA_DIR/'projects.json'; PAGE_SIZE=5
-QUAL=['Actively in Place','In place but without visible evidence']; BOOL=['True','False']; YES_NO_SKIP=['Yes','No / Skip']
+QUAL=['','Actively in Place','In place but without visible evidence']; BOOL=['','True','False']; YES_NO_SKIP=['Yes','No / Skip']
 
 L1=[
 ('L1-01','Awareness of sustainability goals','At project initiation, do project lead communicate sustainability objectives with the client and team members, including relevant guidelines or standards, and discuss what is and is not feasible?',['notes','upload'],'qualitative',None,'desirable'),
@@ -499,7 +499,7 @@ def indicator_card(n, i, d):
                 if cur not in QUAL:
                     cur = QUAL[0]
                 i['status'] = st.selectbox(
-                    'Assign a qualitative degree of satisfaction of the activity required',
+                    'Assign a qualitative degree of satisfaction of the activity',
                     QUAL,
                     index=QUAL.index(cur),
                     key=key + '-status'
@@ -510,7 +510,7 @@ def indicator_card(n, i, d):
                 if cur not in BOOL:
                     cur = BOOL[0]
                 i['status'] = st.selectbox(
-                    'Status',
+                    'Select a binary value based on present status of the activity',
                     BOOL,
                     index=BOOL.index(cur),
                     key=key + '-status'
@@ -521,7 +521,7 @@ def indicator_card(n, i, d):
                 if cur not in QUAL:
                     cur = QUAL[0]
                 i['status'] = st.selectbox(
-                    'Assign a qualitative degree of satisfaction of the activity required',
+                    'Assign a qualitative degree of satisfaction of the activity',
                     QUAL,
                     index=QUAL.index(cur),
                     key=key + '-status'
