@@ -1038,7 +1038,7 @@ def dashboard_progress_bar(n):
         sufficient_plus_hover = (
             "<b>Focus on:</b><br>"
             + (
-                .join(important_desirable_ids)
+               "," .join(important_desirable_ids)
                 if important_desirable_ids
                 else "None identified"
             )
@@ -1047,7 +1047,7 @@ def dashboard_progress_bar(n):
         sufficient_plus_hover = (
             "<b>Focus on:</b><br>"
             + (
-                .join(desirable_ids)
+                ",".join(desirable_ids)
                 if desirable_ids
                 else "None identified"
             )
