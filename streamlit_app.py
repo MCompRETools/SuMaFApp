@@ -499,7 +499,7 @@ def indicator_card(n, i, d):
                 if cur not in QUAL:
                     cur = QUAL[0]
                 i['status'] = st.selectbox(
-                    'Assign a qualitative degree of satisfaction of the activity required',
+                    'Status',
                     QUAL,
                     index=QUAL.index(cur),
                     key=key + '-status'
