@@ -940,7 +940,7 @@ def level_progress_condition(n):
     # Condition 3: at least 80% of all indicators.
     overall_ratio = all_satisfied / len(a)
 
-        advanced = (
+    advanced = (
         sufficient_plus
         and overall_ratio >= 0.80
     )
