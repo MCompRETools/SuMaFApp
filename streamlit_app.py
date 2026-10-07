@@ -1381,19 +1381,14 @@ def assessment():
     st.divider()
     # Progress Insights heading with hover explanation
     st.markdown(
-        """
-        <div class="progress-insights-hover">
-            <span class="progress-insights-title">
-                Your Progress Insights
-            </span>
-    
-            <span class="progress-insights-tooltip">
-                Tool will analyse entered data and give real time sustainability insights
-            </span>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    '<div class="progress-insights-hover">'
+    '<span class="progress-insights-title">Your Progress Insights</span>'
+    '<span class="progress-insights-tooltip">'
+    'Tool will analyse entered data and give real time sustainability insights'
+    '</span>'
+    '</div>',
+    unsafe_allow_html=True
+)
     
     suggestions_found = False
     
