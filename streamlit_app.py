@@ -1376,10 +1376,9 @@ def overview():
                 maturity progress.
             </div>
             <ul>
-                <li>Current maturity-level progress.</li>
+                <li>Current sustainability maturity-level progress.</li>
                 <li>Progress against individual sustainability indicators.</li>
-                <li>Indicator completion and evidence status.</li>
-                <li>Level progress conditions such as <b>Sufficient</b>,
+                <li>Progress made at each level by satisfying three conditions such as <b>Sufficient</b>,
                     <b>Sufficient+</b>, and <b>Advanced</b>.</li>
                 <li>Identification of indicators that remain incomplete or
                     locked because of unmet prerequisites.</li>
