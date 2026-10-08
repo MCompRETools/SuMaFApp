@@ -796,18 +796,41 @@ def level_page(n):
 
 def header():
     s = st.session_state
-    c1, c2, c3 = st.columns([5, 3, .8], vertical_alignment='center')
+
+    c0, c1, c2, c3 = st.columns([1.4, 4.2, 3, 0.8], vertical_alignment='center')
+
+    # Dummy AI Mode button
+    with c0:
+        if st.button(
+            "🤖 AI Mode",
+            type="secondary",
+            use_container_width=True,
+            key="dummy-ai-mode"
+        ):
+            st.info("AI Mode is planned for a future release.")
+
+    # Application branding
     c1.markdown(
         "<div class='brand'>🌿 Sustainability Maturity Tool<br>"
         "<span>Measure • Improve • Build a Greener DevOps</span></div>",
         unsafe_allow_html=True
     )
-    c2.selectbox('Project', s.projects, key='project')
+
+    # Project selector
+    c2.selectbox(
+        'Project',
+        s.projects,
+        key='project'
+    )
+
+    # Participant avatar
     display_code = s.respondent_code.strip() or 'Participant'
+
     c3.markdown(
         f"<div class='avatar'>{display_code[:3].upper()}</div>",
         unsafe_allow_html=True
     )
+
     st.divider()
 def sidebar():
     p = st.session_state.page
@@ -1600,7 +1623,7 @@ def assessment():
     '<div class="progress-insights-hover">'
     '<span class="progress-insights-title">Your Progress Insights</span>'
     '<span class="progress-insights-tooltip">'
-    'Tool will analyse entered data and give real time sustainability insights'
+    'Tool will analyse entered data and give real time sustainability insights when AI mode is ON.'
     '</span>'
     '</div>',
     unsafe_allow_html=True
