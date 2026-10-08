@@ -1311,7 +1311,6 @@ def overview():
         """
         <div class="card">
             <div class="title">1. What is the purpose of the tool?</div>
-
             <div class="obs">
                 The tool supports self-assessment of sustainability maturity
                 in software development and DevOps practices. It uses the
@@ -1320,7 +1319,6 @@ def overview():
                 practices, identify gaps, and understand areas that may
                 require further improvement.
             </div>
-
             <div class="obs">
                 The assessment currently focuses on <b>Level 1 –
                 Sustainability Awareness</b> and <b>Level 2 –
@@ -1340,17 +1338,14 @@ def overview():
         """
         <div class="card">
             <div class="title">2. What is expected from the user?</div>
-
             <div class="obs">
                 The user is expected to review each sustainability indicator
                 and provide information about the current status of the
                 practice within their project or organisation.
             </div>
-
             <div class="obs">
                 For each applicable indicator, the user should:
             </div>
-
             <ul>
                 <li>Indicate whether the practice is applicable / present.</li>
                 <li>Provide relevant evidence, notes, or supporting documents where applicable.</li>
@@ -1358,7 +1353,6 @@ def overview():
                 <li>Provide the recorded date for the assessment.</li>
                 <li>Use <b>No / Skip</b> where the indicator is not applicable or not currently evident.</li>
             </ul>
-
             <div class="obs">
                 Some indicators may remain locked until their prerequisite
                 indicators have been addressed.
@@ -1376,13 +1370,11 @@ def overview():
         """
         <div class="card">
             <div class="title">3. What does the tool provide as output?</div>
-
             <div class="obs">
                 Based on the information and evidence entered by the user,
                 the tool provides a structured view of sustainability
                 maturity progress.
             </div>
-
             <ul>
                 <li>Current maturity-level progress.</li>
                 <li>Progress against individual sustainability indicators.</li>
@@ -1407,45 +1399,37 @@ def overview():
         """
         <div class="card">
             <div class="title">4. Future Release Plans</div>
-
             <div class="obs">
                 The current application is a prototype. Future releases
                 are planned to extend and refine the SuMaF assessment
                 capability.
             </div>
-
             <div style="margin-top:14px;">
                 <b>a. Fine-tuning based on survey outcomes</b>
             </div>
-
             <div class="obs">
                 The framework, indicators, assessment criteria, and tool
                 interface will be refined based on feedback and evaluation
                 results from the current research survey.
             </div>
-
             <div style="margin-top:14px;">
                 <b>b. Development of Levels 3 to 5</b>
             </div>
-
             <div class="obs">
                 Future releases will extend the assessment to:
                 <b>Level 3 – Sustainability Tracking</b>,
                 <b>Level 4 – Sustainability Optimization</b>, and
                 <b>Level 5 – Sustainability AI-enhanced</b>.
             </div>
-
             <div style="margin-top:14px;">
                 <b>c. Optional AI Mode</b>
             </div>
-
             <div class="obs">
                 An optional AI mode is planned to provide real-time,
                 automated sustainability feedback based on the data,
                 evidence, and assessments entered against individual
                 indicators.
             </div>
-
             <div class="obs">
                 The AI mode will be <b>optional</b>. Users will be able to
                 perform the standard assessment without using AI.
