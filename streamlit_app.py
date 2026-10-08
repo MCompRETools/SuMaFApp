@@ -8,7 +8,7 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title='Sustainability Maturity Tool', page_icon='🌿', layout='wide')
 
-st.session_state.setdefault('page', 'dashboard')
+st.session_state.setdefault('page', 'overview')
 DATA_DIR=Path('data'); PROJECTS_FILE=DATA_DIR/'projects.json'; PAGE_SIZE=5
 QUAL=['','Actively in Place','In place but without visible evidence']; BOOL=['','True','False']; YES_NO_SKIP=['Yes','No / Skip']
 
@@ -344,7 +344,7 @@ def init():
     s.setdefault('respondent_code', '')
     s.setdefault('projects', load_projects())
     s.setdefault('project', s.projects[0])
-    s.setdefault('page', 'dashboard')
+    s.setdefault('page', 'overview')
     s.setdefault('user', '')
     s.setdefault('level_indicator_index', {n: 0 for n in LEVELS})
     s.setdefault('next_level_message', None)
@@ -812,6 +812,7 @@ def header():
 def sidebar():
     p = st.session_state.page
     nav = [
+        ('overview', '📖 Overview'),
         ('dashboard', '🏠 Dashboard'),
         ('assessment', '📊 Maturity Assessment')
     ]
@@ -1283,7 +1284,193 @@ def dashboard_progress_bar(n):
         scrolling=False
     )
 
+def overview():
+    st.subheader("Overview")
 
+    st.markdown(
+        """
+        <div class="banner">
+            <div class="badge">🌿</div>
+            <div style="flex:1">
+                <h2>Welcome to the Sustainability Maturity Tool</h2>
+                <p>
+                    A self-assessment tool for evaluating sustainability maturity
+                    across software development and DevOps practices.
+                </p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # ---------------------------------------------------------
+    # 1. Purpose of the tool
+    # ---------------------------------------------------------
+
+    st.markdown(
+        """
+        <div class="card">
+            <div class="title">1. What is the purpose of the tool?</div>
+
+            <div class="obs">
+                The tool supports self-assessment of sustainability maturity
+                in software development and DevOps practices. It uses the
+                Sustainability Maturity Framework (SuMaF) to help users
+                understand the current maturity of their sustainability
+                practices, identify gaps, and understand areas that may
+                require further improvement.
+            </div>
+
+            <div class="obs">
+                The assessment currently focuses on <b>Level 1 –
+                Sustainability Awareness</b> and <b>Level 2 –
+                Sustainability Planning</b>. Higher maturity levels are
+                planned for future releases.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # ---------------------------------------------------------
+    # 2. What is expected from the user?
+    # ---------------------------------------------------------
+
+    st.markdown(
+        """
+        <div class="card">
+            <div class="title">2. What is expected from the user?</div>
+
+            <div class="obs">
+                The user is expected to review each sustainability indicator
+                and provide information about the current status of the
+                practice within their project or organisation.
+            </div>
+
+            <div class="obs">
+                For each applicable indicator, the user should:
+            </div>
+
+            <ul>
+                <li>Indicate whether the practice is applicable / present.</li>
+                <li>Provide relevant evidence, notes, or supporting documents where applicable.</li>
+                <li>Enter quantitative information where the indicator requires measurement.</li>
+                <li>Provide the recorded date for the assessment.</li>
+                <li>Use <b>No / Skip</b> where the indicator is not applicable or not currently evident.</li>
+            </ul>
+
+            <div class="obs">
+                Some indicators may remain locked until their prerequisite
+                indicators have been addressed.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # ---------------------------------------------------------
+    # 3. What does the tool provide as output?
+    # ---------------------------------------------------------
+
+    st.markdown(
+        """
+        <div class="card">
+            <div class="title">3. What does the tool provide as output?</div>
+
+            <div class="obs">
+                Based on the information and evidence entered by the user,
+                the tool provides a structured view of sustainability
+                maturity progress.
+            </div>
+
+            <ul>
+                <li>Current maturity-level progress.</li>
+                <li>Progress against individual sustainability indicators.</li>
+                <li>Indicator completion and evidence status.</li>
+                <li>Level progress conditions such as <b>Sufficient</b>,
+                    <b>Sufficient+</b>, and <b>Advanced</b>.</li>
+                <li>Identification of indicators that remain incomplete or
+                    locked because of unmet prerequisites.</li>
+                <li>Assessment reports that can be downloaded for further
+                    analysis.</li>
+            </ul>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # ---------------------------------------------------------
+    # 4. Future release plans
+    # ---------------------------------------------------------
+
+    st.markdown(
+        """
+        <div class="card">
+            <div class="title">4. Future Release Plans</div>
+
+            <div class="obs">
+                The current application is a prototype. Future releases
+                are planned to extend and refine the SuMaF assessment
+                capability.
+            </div>
+
+            <div style="margin-top:14px;">
+                <b>a. Fine-tuning based on survey outcomes</b>
+            </div>
+
+            <div class="obs">
+                The framework, indicators, assessment criteria, and tool
+                interface will be refined based on feedback and evaluation
+                results from the current research survey.
+            </div>
+
+            <div style="margin-top:14px;">
+                <b>b. Development of Levels 3 to 5</b>
+            </div>
+
+            <div class="obs">
+                Future releases will extend the assessment to:
+                <b>Level 3 – Sustainability Tracking</b>,
+                <b>Level 4 – Sustainability Optimization</b>, and
+                <b>Level 5 – Sustainability AI-enhanced</b>.
+            </div>
+
+            <div style="margin-top:14px;">
+                <b>c. Optional AI Mode</b>
+            </div>
+
+            <div class="obs">
+                An optional AI mode is planned to provide real-time,
+                automated sustainability feedback based on the data,
+                evidence, and assessments entered against individual
+                indicators.
+            </div>
+
+            <div class="obs">
+                The AI mode will be <b>optional</b>. Users will be able to
+                perform the standard assessment without using AI.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # ---------------------------------------------------------
+    # Start assessment
+    # ---------------------------------------------------------
+
+    st.divider()
+
+    if st.button(
+        "▶ Start Sustainability Assessment",
+        type="primary",
+        use_container_width=True,
+        key="overview-start-assessment"
+    ):
+        st.session_state.level_indicator_index[1] = 0
+        go("level-1")
+        st.rerun()
+        
 def dashboard():
     st.subheader('Dashboard')
 
@@ -1527,9 +1714,17 @@ header()
         #"before starting the assessment. Each browser session is isolated."
     #)
 sidebar()
-p=st.session_state.page
-if p.startswith('level-'):level_page(int(p.split('-')[1]))
-elif p=='assessment':assessment()
-elif p=='reports':reports()
-elif p=='settings':settings()
-else:dashboard()
+p = st.session_state.page
+
+if p == 'overview':
+    overview()
+elif p.startswith('level-'):
+    level_page(int(p.split('-')[1]))
+elif p == 'assessment':
+    assessment()
+elif p == 'reports':
+    reports()
+elif p == 'settings':
+    settings()
+else:
+    dashboard()
