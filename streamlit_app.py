@@ -797,27 +797,24 @@ def level_page(n):
 def header():
     s = st.session_state
 
-    c0, c1, c2, c3 = st.columns([1.4, 4.2, 3, 0.8], vertical_alignment='center')
+    c1, c2, c3, c4 = st.columns([1.5, 4.1, 3, 0.8], vertical_alignment='center')
 
-    # Dummy AI Mode button
-    with c0:
-        if st.button(
+    # AI Mode toggle
+    with c1:
+        st.toggle(
             "🤖 AI Mode",
-            type="secondary",
-            use_container_width=True,
-            key="dummy-ai-mode"
-        ):
-            st.info("AI Mode is planned for a future release.")
+            key="ai_mode"
+        )
 
     # Application branding
-    c1.markdown(
+    c2.markdown(
         "<div class='brand'>🌿 Sustainability Maturity Tool<br>"
         "<span>Measure • Improve • Build a Greener DevOps</span></div>",
         unsafe_allow_html=True
     )
 
     # Project selector
-    c2.selectbox(
+    c3.selectbox(
         'Project',
         s.projects,
         key='project'
@@ -826,12 +823,20 @@ def header():
     # Participant avatar
     display_code = s.respondent_code.strip() or 'Participant'
 
-    c3.markdown(
+    c4.markdown(
         f"<div class='avatar'>{display_code[:3].upper()}</div>",
         unsafe_allow_html=True
     )
 
+    # Show AI Mode message only when ON
+    if s.ai_mode:
+        st.info(
+            "🤖 AI Mode is enabled. "
+            "AI-assisted sustainability feedback will be available in a future release."
+        )
+
     st.divider()
+    
 def sidebar():
     p = st.session_state.page
     nav = [
