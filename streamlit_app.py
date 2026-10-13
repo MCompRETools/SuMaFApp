@@ -1554,15 +1554,15 @@ def dashboard():
     st.divider()
 
     # Start the assessment from Level 1.
-    if st.button(
-        "▶ Start Assessment",
-        type="primary",
-        use_container_width=True,
-        key="dashboard-start-assessment"
-    ):
-        st.session_state.level_indicator_index[1] = 0
-        go("level-1")
-        st.rerun()
+    #if st.button(
+     #   "▶ Start Assessment",
+      #  type="primary",
+       # use_container_width=True,
+       # key="dashboard-start-assessment"
+    #):
+     #   st.session_state.level_indicator_index[1] = 0
+      #  go("level-1")
+       # st.rerun()
 
     st.subheader("Level progress conditions")
     st.caption(
