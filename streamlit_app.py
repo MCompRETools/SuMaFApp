@@ -1468,7 +1468,7 @@ def overview():
     st.markdown(
         """
         <div class="card">
-            <div class="title">Disclaimer: Anonymity, Data Usage</div>
+            <div class="title">Disclaimer: Data Usage</div>
             <div class="obs">
                 Data storage: The application is currently designed as a non-persistent prototype. 
                 Assessment data entered during a session is not intended to be retained by the application 
@@ -1477,6 +1477,10 @@ def overview():
             <div class="obs">
                  Please provide only information that you are authorised to share and avoid including confidential, 
                  proprietary, or personally identifiable information in assessment responses.
+            </div>
+             <div class="obs">
+                 The tool prototype does not capture any personal information including company information,
+                 personal identifiers, credentials, or commercially sensitive details.
             </div>
         </div>
         """,
