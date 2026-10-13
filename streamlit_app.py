@@ -1465,7 +1465,23 @@ def overview():
         """,
         unsafe_allow_html=True
     )
-
+    st.markdown(
+        """
+        <div class="card">
+            <div class="title">Disclaimer: Anonymity, Data Usage</div>
+            <div class="obs">
+                Data storage: The application is currently designed as a non-persistent prototype. 
+                Assessment data entered during a session is not intended to be retained by the application 
+                in a local file or database. Reloading or restarting the application may reset the entered data.
+            </div>
+            <div class="obs">
+                 Please provide only information that you are authorised to share and avoid including confidential, 
+                 proprietary, or personally identifiable information in assessment responses.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     # ---------------------------------------------------------
     # Start assessment
     # ---------------------------------------------------------
